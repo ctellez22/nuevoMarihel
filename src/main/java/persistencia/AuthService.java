@@ -22,7 +22,7 @@ public class AuthService {
                     JOIN app_rol r ON r.id = ur.rol_id
                     WHERE u.username = ?1
                       AND u.activo = TRUE
-                      AND u.password_hash = crypt(?2, u.password_hash)
+                      AND u.password_hash = SHA2(?2, 256)
                     ORDER BY u.id
                     LIMIT 1
                     """);
@@ -50,7 +50,7 @@ public class AuthService {
             if (em.getTransaction().isActive()) {
                 em.getTransaction().rollback();
             }
-            throw new IllegalStateException("No se pudo autenticar. Verifica la extension pgcrypto y datos de usuarios.", ex);
+            throw new IllegalStateException("No se pudo autenticar. Verifica usuario, contrasena y tablas de autenticacion.", ex);
         } finally {
             em.close();
         }

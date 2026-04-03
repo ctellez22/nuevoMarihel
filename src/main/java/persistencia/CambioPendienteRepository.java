@@ -22,7 +22,7 @@ public class CambioPendienteRepository {
             em.getTransaction().begin();
             Query query = em.createNativeQuery("""
                     INSERT INTO cambio_pendiente (entidad, entidad_id, operacion, before_json, after_json, estado, solicitado_por, solicitado_en)
-                    VALUES (?1, ?2, ?3, CAST(?4 AS jsonb), CAST(?5 AS jsonb), 'PENDIENTE', ?6, NOW())
+                    VALUES (?1, ?2, ?3, ?4, ?5, 'PENDIENTE', ?6, NOW())
                     """);
             query.setParameter(1, entidad);
             query.setParameter(2, entidadId);
@@ -46,7 +46,7 @@ public class CambioPendienteRepository {
         EntityManager em = PersistenceManager.createEntityManager();
         try {
             Query query = em.createNativeQuery("""
-                    SELECT id, entidad, entidad_id, operacion, CAST(before_json AS text), CAST(after_json AS text), solicitado_por, solicitado_en
+                    SELECT id, entidad, entidad_id, operacion, CAST(before_json AS CHAR), CAST(after_json AS CHAR), solicitado_por, solicitado_en
                     FROM cambio_pendiente
                     WHERE estado = 'PENDIENTE' AND entidad = 'joya'
                     ORDER BY solicitado_en ASC
@@ -174,23 +174,26 @@ public class CambioPendienteRepository {
             } else if ("UPDATE".equalsIgnoreCase(operacion)) {
                 Query rollbackUpdate = em.createNativeQuery("""
                         UPDATE joya j
-                        SET nombre = cp.before_json ->> 'nombre',
-                            precio = cp.before_json ->> 'precio',
-                            peso = COALESCE(CAST(cp.before_json ->> 'peso' AS double precision), j.peso),
-                            categoria = cp.before_json ->> 'categoria',
-                            socio = cp.before_json ->> 'socio',
-                            observacion = cp.before_json ->> 'observacion',
-                            tiene_piedra = COALESCE(CAST(cp.before_json ->> 'tienePiedra' AS boolean), j.tiene_piedra),
-                            info_piedra = cp.before_json ->> 'infoPiedra',
-                            vendido = COALESCE(CAST(cp.before_json ->> 'vendido' AS boolean), j.vendido),
-                            estado = COALESCE(cp.before_json ->> 'estado', j.estado),
-                            fecha_vendida = CAST(NULLIF(cp.before_json ->> 'fechaVendida', '') AS timestamp),
-                            autorizado = TRUE,
-                            actualizado_en = NOW(),
-                            actualizado_por = ?2
-                        FROM cambio_pendiente cp
-                        WHERE cp.id = ?1
-                          AND j.id = cp.entidad_id
+                        JOIN cambio_pendiente cp ON cp.id = ?1 AND j.id = cp.entidad_id
+                        SET j.nombre = COALESCE(JSON_UNQUOTE(JSON_EXTRACT(cp.before_json, '$.nombre')), j.nombre),
+                            j.precio = COALESCE(JSON_UNQUOTE(JSON_EXTRACT(cp.before_json, '$.precio')), j.precio),
+                            j.peso = COALESCE(CAST(JSON_UNQUOTE(JSON_EXTRACT(cp.before_json, '$.peso')) AS DECIMAL(16,4)), j.peso),
+                            j.categoria = COALESCE(JSON_UNQUOTE(JSON_EXTRACT(cp.before_json, '$.categoria')), j.categoria),
+                            j.socio = COALESCE(JSON_UNQUOTE(JSON_EXTRACT(cp.before_json, '$.socio')), j.socio),
+                            j.observacion = COALESCE(JSON_UNQUOTE(JSON_EXTRACT(cp.before_json, '$.observacion')), j.observacion),
+                            j.tiene_piedra = COALESCE(CAST(JSON_UNQUOTE(JSON_EXTRACT(cp.before_json, '$.tienePiedra')) AS UNSIGNED), j.tiene_piedra),
+                            j.info_piedra = COALESCE(JSON_UNQUOTE(JSON_EXTRACT(cp.before_json, '$.infoPiedra')), j.info_piedra),
+                            j.vendido = COALESCE(CAST(JSON_UNQUOTE(JSON_EXTRACT(cp.before_json, '$.vendido')) AS UNSIGNED), j.vendido),
+                            j.estado = COALESCE(JSON_UNQUOTE(JSON_EXTRACT(cp.before_json, '$.estado')), j.estado),
+                            j.fecha_vendida = COALESCE(
+                                STR_TO_DATE(JSON_UNQUOTE(JSON_EXTRACT(cp.before_json, '$.fechaVendida')), '%Y-%m-%d %H:%i:%s'),
+                                STR_TO_DATE(JSON_UNQUOTE(JSON_EXTRACT(cp.before_json, '$.fechaVendida')), '%Y-%m-%dT%H:%i:%s'),
+                                j.fecha_vendida
+                            ),
+                            j.autorizado = TRUE,
+                            j.actualizado_en = NOW(),
+                            j.actualizado_por = ?2
+                        WHERE cp.estado = 'PENDIENTE' AND cp.entidad = 'joya'
                         """);
                 rollbackUpdate.setParameter(1, pendienteId);
                 rollbackUpdate.setParameter(2, adminId);

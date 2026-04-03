@@ -8,8 +8,8 @@ import javax.swing.*;
 import java.awt.*;
 
 public class Main {
-    private static final String DEFAULT_DB_URL = "jdbc:postgresql://inventario.ch8e60owuv57.us-east-2.rds.amazonaws.com:5432/postgres";
-    private static final String DEFAULT_DB_USER = "postgres";
+    private static final String DEFAULT_DB_URL = "jdbc:mysql://marihel.ck38iw4amrdb.us-east-1.rds.amazonaws.com:3306/marihel?sslMode=REQUIRED&serverTimezone=UTC";
+    private static final String DEFAULT_DB_USER = "admin";
     private static final String DEFAULT_DB_PASSWORD = "inventario";
 
     public static void main(String[] args) {
@@ -17,6 +17,7 @@ public class Main {
 
         try {
             PersistenceManager.validateConnection();
+            PersistenceManager.ensureSchemaCompatibility();
         } catch (IllegalStateException e) {
             JOptionPane.showMessageDialog(null, e.getMessage(), "Error de conexión", JOptionPane.ERROR_MESSAGE);
             return;
@@ -94,16 +95,27 @@ public class Main {
         aplicarSiExiste("db.user", "DB_USER");
         aplicarSiExiste("db.password", "DB_PASSWORD");
 
-        // Fallback local: usa credenciales embebidas si no llegan por variables de entorno.
+        // Permite correr localmente sin configurar variables de entorno en cada ejecución.
         aplicarDefaultSiFalta("db.url", DEFAULT_DB_URL);
         aplicarDefaultSiFalta("db.user", DEFAULT_DB_USER);
         aplicarDefaultSiFalta("db.password", DEFAULT_DB_PASSWORD);
+
+        validarRequerida("db.url", "DB_URL");
+        validarRequerida("db.user", "DB_USER");
+        validarRequerida("db.password", "DB_PASSWORD");
     }
 
     private static void aplicarSiExiste(String systemProperty, String envVar) {
         String valor = System.getenv(envVar);
         if (valor != null && !valor.isBlank()) {
             System.setProperty(systemProperty, valor);
+        }
+    }
+
+    private static void validarRequerida(String systemProperty, String envVar) {
+        String actual = System.getProperty(systemProperty);
+        if (actual == null || actual.isBlank()) {
+            throw new IllegalStateException("Falta configuración de base de datos. Define la variable " + envVar + ".");
         }
     }
 

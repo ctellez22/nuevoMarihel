@@ -1,5 +1,6 @@
 package igu;
 
+import logica.Categoria;
 import logica.CategoriaVerificacion;
 import logica.Controladora;
 import logica.Joya;
@@ -48,6 +49,7 @@ public class GroupBy {
         listModel = new DefaultListModel<>();
         listaJoyas.setModel(listModel);
         listaJoyas.setCellRenderer(new JoyaListCellRenderer());
+        cargarCategoriasDesdeBD();
         cargarCategoriasVerificacion();
 
 
@@ -65,7 +67,11 @@ public class GroupBy {
         // Acción para "Categoría"
         comboBoxCategoria.addActionListener(e -> {
             if (!enVerificacion) {
-                cargarJoyasPorCategoria((String) comboBoxCategoria.getSelectedItem());
+                String categoriaSeleccionada = (String) comboBoxCategoria.getSelectedItem();
+                if (categoriaSeleccionada == null || categoriaSeleccionada.isBlank() || "Seleccione categoria...".equals(categoriaSeleccionada)) {
+                    return;
+                }
+                cargarJoyasPorCategoria(categoriaSeleccionada);
                 todasLasJoyasCheckBox.setSelected(false);
             }
         });
@@ -141,6 +147,20 @@ public class GroupBy {
             }
         });
 
+    }
+
+    private void cargarCategoriasDesdeBD() {
+        comboBoxCategoria.removeAllItems();
+        comboBoxCategoria.addItem("Seleccione categoria...");
+        try {
+            List<Categoria> categorias = controladora.obtenerCategorias();
+            for (Categoria categoria : categorias) {
+                comboBoxCategoria.addItem(categoria.getNombre());
+            }
+            comboBoxCategoria.setSelectedIndex(0);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(mainPanel, "No se pudieron cargar las categorias: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void cargarTodasLasJoyas() {

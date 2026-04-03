@@ -86,12 +86,12 @@ public class JoyaJpaController implements Serializable {
                     long next = (lastVal == null ? 1L : lastVal + 1L);
 
                     try {
-                        int updated = em.createNativeQuery("UPDATE display_id_seq SET last_val = :nv WHERE id = 1")
-                                .setParameter("nv", next)
+                        int updated = em.createNativeQuery("UPDATE display_id_seq SET last_val = ?1 WHERE id = 1")
+                                .setParameter(1, next)
                                 .executeUpdate();
                         if (updated == 0) {
-                            em.createNativeQuery("INSERT INTO display_id_seq (id, last_val) VALUES (1, :nv)")
-                                    .setParameter("nv", next)
+                            em.createNativeQuery("INSERT INTO display_id_seq (id, last_val) VALUES (1, ?1)")
+                                    .setParameter(1, next)
                                     .executeUpdate();
                         }
                     } catch (Exception e) {
@@ -148,7 +148,7 @@ public class JoyaJpaController implements Serializable {
     public List<Joya> findAll() {
         EntityManager em = getEntityManager();
         try {
-            Query query = em.createNativeQuery("SELECT * FROM Joya", Joya.class);
+            Query query = em.createNativeQuery("SELECT * FROM joya", Joya.class);
             return query.getResultList();
         } finally {
             em.close();
@@ -176,11 +176,11 @@ public class JoyaJpaController implements Serializable {
                 }
             }
 
-            StringBuilder sql = new StringBuilder("SELECT * FROM Joya WHERE 1=1");
+            StringBuilder sql = new StringBuilder("SELECT * FROM joya WHERE 1=1");
 
             if (trimmedId != null && !trimmedId.isEmpty()) {
                 if (searchByDisplayId) {
-                    sql.append(" AND LOWER(displayId) = :displayId");
+                    sql.append(" AND LOWER(display_id) = :displayId");
                 } else {
                     sql.append(" AND id = :id");
                 }
@@ -246,7 +246,7 @@ public class JoyaJpaController implements Serializable {
                 String suffix = trimmedId.substring(1);
                 try {
                     long numericId = Long.parseLong(suffix);
-                    StringBuilder sql2 = new StringBuilder("SELECT * FROM Joya WHERE 1=1");
+                    StringBuilder sql2 = new StringBuilder("SELECT * FROM joya WHERE 1=1");
                     sql2.append(" AND id = :id");
                     if (categoria != null && !categoria.isEmpty()) sql2.append(" AND categoria = :categoria");
                     if (socio != null && !socio.isEmpty()) sql2.append(" AND socio = :socio");
