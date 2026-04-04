@@ -185,6 +185,7 @@ public class CambioPendienteRepository {
                             j.info_piedra = COALESCE(JSON_UNQUOTE(JSON_EXTRACT(cp.before_json, '$.infoPiedra')), j.info_piedra),
                             j.vendido = COALESCE(CAST(JSON_UNQUOTE(JSON_EXTRACT(cp.before_json, '$.vendido')) AS UNSIGNED), j.vendido),
                             j.estado = COALESCE(JSON_UNQUOTE(JSON_EXTRACT(cp.before_json, '$.estado')), j.estado),
+                            j.precio_venta = COALESCE(JSON_UNQUOTE(JSON_EXTRACT(cp.before_json, '$.precioVenta')), j.precio_venta),
                             j.fecha_vendida = COALESCE(
                                 STR_TO_DATE(JSON_UNQUOTE(JSON_EXTRACT(cp.before_json, '$.fechaVendida')), '%Y-%m-%d %H:%i:%s'),
                                 STR_TO_DATE(JSON_UNQUOTE(JSON_EXTRACT(cp.before_json, '$.fechaVendida')), '%Y-%m-%dT%H:%i:%s'),

@@ -62,13 +62,14 @@ public class ControladoraPersistencia {
                 nuevaJoya.getInfoPiedra(),
                 nuevaJoya.isVendido(),
                 nuevaJoya.getEstado(),
-                null
+                null,
+                nuevaJoya.getPrecioVenta()
         );
         cambioPendienteRepository.crearPendiente("joya", nuevaJoya.getId(), "INSERT", null, afterJson, solicitadoPor);
     }
 
     // Editar una Joya existente
-    public void editarJoya(Long id, String nombre, String precio, double peso, String categoria, String socio, String observacion, boolean tienePiedra, String infoPiedra, Boolean vendido, LocalDateTime fechaVendida, String estado) {
+    public void editarJoya(Long id, String nombre, String precio, double peso, String categoria, String socio, String observacion, boolean tienePiedra, String infoPiedra, Boolean vendido, LocalDateTime fechaVendida, String estado, String precioVenta) {
         Joya joya = joyaController.find(id);
         if (joya != null) {
             joya.setNombre(nombre);
@@ -82,6 +83,7 @@ public class ControladoraPersistencia {
             joya.setVendido(vendido);
             joya.setFechaVendida(fechaVendida);
             joya.setEstado(estado);
+            joya.setPrecioVenta(precioVenta);
             joyaController.edit(joya);
             System.out.println("Joya editada: " + joya);
         } else {
@@ -101,7 +103,8 @@ public class ControladoraPersistencia {
                                                   String infoPiedra,
                                                   Boolean vendido,
                                                   LocalDateTime fechaVendida,
-                                                  String estado) {
+                                                  String estado,
+                                                  String precioVenta) {
         Joya actual = joyaController.find(id);
         if (actual == null) {
             throw new IllegalArgumentException("Joya con ID " + id + " no encontrada.");
@@ -118,7 +121,8 @@ public class ControladoraPersistencia {
                 actual.getInfoPiedra(),
                 actual.isVendido(),
                 actual.getEstado(),
-                actual.getFechaVendida()
+                actual.getFechaVendida(),
+                actual.getPrecioVenta()
         );
 
         String afterJson = jsonJoya(
@@ -132,16 +136,17 @@ public class ControladoraPersistencia {
                 infoPiedra,
                 vendido != null && vendido,
                 estado,
-                fechaVendida
+                fechaVendida,
+                precioVenta
         );
 
-        editarJoya(id, nombre, precio, peso, categoria, socio, observacion, tienePiedra, infoPiedra, vendido, fechaVendida, estado);
+        editarJoya(id, nombre, precio, peso, categoria, socio, observacion, tienePiedra, infoPiedra, vendido, fechaVendida, estado, precioVenta);
         marcarJoyaNoAutorizada(id);
 
         cambioPendienteRepository.crearPendiente("joya", id, "UPDATE", beforeJson, afterJson, solicitadoPor);
     }
 
-    public void registrarPendienteMarcarVendida(Long solicitadoPor, Long id) {
+    public void registrarPendienteMarcarVendida(Long solicitadoPor, Long id, String precioVenta) {
         Joya actual = joyaController.find(id);
         if (actual == null) {
             throw new IllegalArgumentException("Joya con ID " + id + " no encontrada.");
@@ -164,7 +169,8 @@ public class ControladoraPersistencia {
                 actual.getInfoPiedra(),
                 true,
                 fechaVenta,
-                actual.getEstado()
+                actual.getEstado(),
+                precioVenta
         );
     }
 
@@ -205,6 +211,10 @@ public class ControladoraPersistencia {
     public List<Joya> filtrarJoyas(String id, String categoria, String socio, String nombre, Boolean noVendido, List<String> estado) {
         return joyaController.filtrarJoyas(id, categoria, socio, nombre, noVendido, estado);
     }
+    public List<Joya> obtenerVentasPorRango(LocalDateTime desde, LocalDateTime hasta) {
+        return joyaController.obtenerVentasPorRango(desde, hasta);
+    }
+
     //Obtener  la ultima joya
     public Joya obtenerUltimaJoya() {
         return joyaController.obtenerUltimaJoya();
@@ -269,7 +279,8 @@ public class ControladoraPersistencia {
                             String infoPiedra,
                             boolean vendido,
                             String estado,
-                            LocalDateTime fechaVendida) {
+                            LocalDateTime fechaVendida,
+                            String precioVenta) {
         return "{" +
                 "\"nombre\":\"" + escapeJson(nombre) + "\"," +
                 "\"precio\":\"" + escapeJson(precio) + "\"," +
@@ -281,7 +292,8 @@ public class ControladoraPersistencia {
                 "\"infoPiedra\":\"" + escapeJson(infoPiedra) + "\"," +
                 "\"vendido\":" + vendido + "," +
                 "\"estado\":\"" + escapeJson(estado) + "\"," +
-                "\"fechaVendida\":\"" + escapeJson(fechaVendida == null ? "" : fechaVendida.toString()) + "\"" +
+                "\"fechaVendida\":\"" + escapeJson(fechaVendida == null ? "" : fechaVendida.toString()) + "\"," +
+                "\"precioVenta\":\"" + escapeJson(precioVenta) + "\"" +
                 "}";
     }
 

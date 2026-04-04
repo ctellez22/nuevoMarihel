@@ -19,6 +19,9 @@ public class Joya {
     @Column
     private String precio;
 
+    @Column(name = "precio_venta")
+    private String precioVenta;
+
     @Column
     private double peso;
 
@@ -107,6 +110,14 @@ public class Joya {
 
     public void setPrecio(String precio) {
         this.precio = precio;
+    }
+
+    public String getPrecioVenta() {
+        return precioVenta;
+    }
+
+    public void setPrecioVenta(String precioVenta) {
+        this.precioVenta = precioVenta;
     }
 
     public double getPeso() {
@@ -220,6 +231,7 @@ public class Joya {
                 ", displayId='" + displayId + '\'' +
                 ", nombre='" + nombre + '\'' +
                 ", precio=" + precio +
+                ", precioVenta=" + precioVenta +
                 ", peso=" + peso +
                 ", categoria='" + categoria + '\'' +
                 ", observacion='" + observacion + '\'' +

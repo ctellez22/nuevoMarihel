@@ -58,6 +58,9 @@ public class DetallesJoya {
         String fechaVendidaTexto = joya.getFechaVendida() != null
                 ? joya.getFechaVendida().format(formatter)
                 : "No vendida";
+        if (joya.getPrecioVenta() != null && !joya.getPrecioVenta().isBlank()) {
+            fechaVendidaTexto += " | Precio venta: $" + joya.getPrecioVenta();
+        }
         lblFechaVendida.setText(fechaVendidaTexto);
 
         if (joya.isTienePiedra()) {
@@ -119,16 +122,27 @@ public class DetallesJoya {
     }
 
     private void confirmarMarcarVendido(Joya joya) {
+        String sugerido = (joya.getPrecioVenta() != null && !joya.getPrecioVenta().isBlank()) ? joya.getPrecioVenta() : joya.getPrecio();
+        String precioVenta = JOptionPane.showInputDialog(
+                null,
+                "Ingresa el precio real de venta:",
+                sugerido
+        );
+
+        if (precioVenta == null) {
+            return;
+        }
+
         int confirm = JOptionPane.showConfirmDialog(
                 null,
-                "¿Estás seguro de que deseas marcar esta joya como vendida?",
+                "¿Estás seguro de que deseas marcar esta joya como vendida por $" + precioVenta.trim() + "?",
                 "Confirmar",
                 JOptionPane.YES_NO_OPTION
         );
 
         if (confirm == JOptionPane.YES_OPTION) {
             try {
-                boolean aplicadaDirecto = controladora.marcarComoVendidaConAutorizacion(session, joya.getId());
+                boolean aplicadaDirecto = controladora.marcarComoVendidaConAutorizacion(session, joya.getId(), precioVenta);
                 JOptionPane.showMessageDialog(
                         null,
                         aplicadaDirecto
@@ -140,6 +154,7 @@ public class DetallesJoya {
                 marcarVendidoButton.setEnabled(false);
                 marcarVendidoButton.setText(aplicadaDirecto ? "Ya Vendido" : "Pendiente aprobación");
                 marcarVendidoButton.setBackground(Color.GRAY);
+                joya.setPrecioVenta(precioVenta.trim());
                 if (interfazPrincipal != null) {
                     interfazPrincipal.actualizarListaFiltrada();
                 }

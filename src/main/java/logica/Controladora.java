@@ -3,6 +3,7 @@ package logica;
 import org.example.SessionContext;
 import persistencia.ControladoraPersistencia;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -85,14 +86,14 @@ public class Controladora {
 
 
     // Editar una joya existente
-    public void actualizarJoya(Long id, String nombre, String precio, double peso, String categoria, String socio, String observacion, Boolean tienePiedra, String infoPiedra, Boolean vendido, LocalDateTime fechaVendida, String estado) {
+    public void actualizarJoya(Long id, String nombre, String precio, double peso, String categoria, String socio, String observacion, Boolean tienePiedra, String infoPiedra, Boolean vendido, LocalDateTime fechaVendida, String estado, String precioVenta) {
         if (peso < 0) {
             throw new IllegalArgumentException("El precio y el peso deben ser mayores o iguales a 0.");
         }
         if (nombre == null || nombre.isEmpty()) {
             throw new IllegalArgumentException("El nombre no puede estar vacío.");
         }
-        persistencia.editarJoya(id, nombre, precio, peso, categoria, socio, observacion, tienePiedra, infoPiedra, vendido, fechaVendida, estado);
+        persistencia.editarJoya(id, nombre, precio, peso, categoria, socio, observacion, tienePiedra, infoPiedra, vendido, fechaVendida, estado, precioVenta);
     }
 
     public boolean actualizarJoyaConAutorizacion(SessionContext session,
@@ -107,7 +108,8 @@ public class Controladora {
                                                  String infoPiedra,
                                                  Boolean vendido,
                                                  LocalDateTime fechaVendida,
-                                                 String estado) {
+                                                 String estado,
+                                                 String precioVenta) {
         if (session != null && !session.isAdmin()) {
             persistencia.registrarPendienteActualizarJoya(
                     session.userId(),
@@ -122,12 +124,13 @@ public class Controladora {
                     infoPiedra,
                     vendido,
                     fechaVendida,
-                    estado
+                    estado,
+                    precioVenta
             );
             return false;
         }
 
-        actualizarJoya(id, nombre, precio, peso, categoria, socio, observacion, tienePiedra, infoPiedra, vendido, fechaVendida, estado);
+        actualizarJoya(id, nombre, precio, peso, categoria, socio, observacion, tienePiedra, infoPiedra, vendido, fechaVendida, estado, precioVenta);
         return true;
     }
 
@@ -200,10 +203,12 @@ public class Controladora {
 
 
     // Marcar una joya como vendida
-    public void marcarComoVendida(Long id) {
+    public void marcarComoVendida(Long id, String precioVenta) {
         if (id == null || id <= 0) {
             throw new IllegalArgumentException("El ID debe ser un número positivo.");
         }
+
+        String precioVentaNormalizado = validarYNormalizarPrecioVenta(precioVenta);
 
         Joya joya = persistencia.obtenerJoyaPorId(id); // Obtener la joya desde la base de datos
         if (joya == null) {
@@ -216,16 +221,45 @@ public class Controladora {
 
         joya.setVendido(true); // Actualizar el atributo "vendido" de la joya
         joya.setFechaVendida(LocalDateTime.now());
-        persistencia.editarJoya(joya.getId(), joya.getNombre(), joya.getPrecio(), joya.getPeso(), joya.getCategoria(), joya.getSocio(), joya.getObservacion(), joya.isTienePiedra(), joya.getInfoPiedra(), joya.isVendido(), joya.getFechaVendida(), joya.getEstado());
+        joya.setPrecioVenta(precioVentaNormalizado);
+        persistencia.editarJoya(joya.getId(), joya.getNombre(), joya.getPrecio(), joya.getPeso(), joya.getCategoria(), joya.getSocio(), joya.getObservacion(), joya.isTienePiedra(), joya.getInfoPiedra(), joya.isVendido(), joya.getFechaVendida(), joya.getEstado(), joya.getPrecioVenta());
     }
 
-    public boolean marcarComoVendidaConAutorizacion(SessionContext session, Long id) {
+    public boolean marcarComoVendidaConAutorizacion(SessionContext session, Long id, String precioVenta) {
+        String precioVentaNormalizado = validarYNormalizarPrecioVenta(precioVenta);
         if (session != null && !session.isAdmin()) {
-            persistencia.registrarPendienteMarcarVendida(session.userId(), id);
+            persistencia.registrarPendienteMarcarVendida(session.userId(), id, precioVentaNormalizado);
             return false;
         }
-        marcarComoVendida(id);
+        marcarComoVendida(id, precioVentaNormalizado);
         return true;
+    }
+
+    private String validarYNormalizarPrecioVenta(String precioVenta) {
+        if (precioVenta == null || precioVenta.isBlank()) {
+            throw new IllegalArgumentException("Debes ingresar el precio de venta.");
+        }
+
+        String valor = precioVenta.trim();
+        String numerico = valor
+                .replace("$", "")
+                .replace("'", "")
+                .replace(" ", "")
+                .replace(",", "");
+
+        try {
+            if (new BigDecimal(numerico).compareTo(BigDecimal.ZERO) <= 0) {
+                throw new IllegalArgumentException("El precio de venta debe ser mayor a 0.");
+            }
+        } catch (NumberFormatException ex) {
+            throw new IllegalArgumentException("El precio de venta debe ser numérico.");
+        }
+
+        return valor;
+    }
+
+    public List<Joya> obtenerVentasPorRango(LocalDateTime desde, LocalDateTime hasta) {
+        return persistencia.obtenerVentasPorRango(desde, hasta);
     }
 
     // Obtener una joya por ID

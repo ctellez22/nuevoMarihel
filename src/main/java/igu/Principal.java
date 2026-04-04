@@ -17,6 +17,7 @@ public class Principal {
     private JPanel panelFoto;
     private JButton categorias;
     private JButton socios;
+    private JButton ventas;
     private final SessionContext session;
 
     public Principal() {
@@ -106,6 +107,15 @@ public class Principal {
             frame.setVisible(true);
         });
 
+        // Acción para el botón "Ventas"
+        ventas.addActionListener(e -> {
+            VentasDialog dialog = new VentasDialog(
+                    (java.awt.Frame) SwingUtilities.getWindowAncestor(mainPanel),
+                    session
+            );
+            dialog.setVisible(true);
+        });
+
         aplicarPermisosPorRol();
     }
 
@@ -116,6 +126,7 @@ public class Principal {
         boolean esAdmin = session.isAdmin();
         categorias.setEnabled(esAdmin);
         socios.setEnabled(esAdmin);
+        ventas.setEnabled(esAdmin);
     }
 
     private void cargarImagenEnPanelFoto() {

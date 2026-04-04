@@ -288,6 +288,24 @@ public class JoyaJpaController implements Serializable {
         }
     }
 
+    public List<Joya> obtenerVentasPorRango(java.time.LocalDateTime desde, java.time.LocalDateTime hasta) {
+        EntityManager em = getEntityManager();
+        try {
+            return em.createQuery(
+                    "SELECT j FROM Joya j WHERE j.vendido = true" +
+                    " AND j.fechaVendida >= :desde AND j.fechaVendida <= :hasta" +
+                    " ORDER BY j.fechaVendida DESC", Joya.class)
+                    .setParameter("desde", desde)
+                    .setParameter("hasta", hasta)
+                    .getResultList();
+        } catch (Exception e) {
+            System.err.println("Error al obtener ventas por rango: " + e.getMessage());
+            return List.of();
+        } finally {
+            em.close();
+        }
+    }
+
     public Joya obtenerUltimaJoya() {
         EntityManager em = getEntityManager();
         try {

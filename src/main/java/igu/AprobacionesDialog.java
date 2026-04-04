@@ -147,7 +147,7 @@ public class AprobacionesDialog extends JDialog {
     }
 
     private List<String> orderedKeys(Map<String, String> beforeMap, Map<String, String> afterMap) {
-        List<String> preferred = List.of("nombre", "categoria", "socio", "precio", "peso", "estado", "vendido", "tienePiedra", "infoPiedra", "observacion", "fechaVendida");
+        List<String> preferred = List.of("nombre", "categoria", "socio", "precio", "precioVenta", "peso", "estado", "vendido", "tienePiedra", "infoPiedra", "observacion", "fechaVendida");
         Set<String> keys = new LinkedHashSet<>();
         keys.addAll(preferred);
         keys.addAll(beforeMap.keySet());
@@ -161,6 +161,7 @@ public class AprobacionesDialog extends JDialog {
         labels.put("categoria", "Categoria");
         labels.put("socio", "Socio");
         labels.put("precio", "Precio");
+        labels.put("precioVenta", "Precio venta");
         labels.put("peso", "Peso");
         labels.put("estado", "Estado");
         labels.put("vendido", "Vendido");

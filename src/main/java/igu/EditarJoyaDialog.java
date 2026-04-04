@@ -152,7 +152,8 @@ public class EditarJoyaDialog extends JDialog {
                     joya.getInfoPiedra(),
                     joya.isVendido(),
                     joya.getFechaVendida(),
-                    joya.getEstado()
+                    joya.getEstado(),
+                    joya.getPrecioVenta()
             );
 
             // Confirmación al usuario

@@ -48,8 +48,9 @@ CREATE TABLE IF NOT EXISTS joya (
     estado       VARCHAR(50)  DEFAULT 'disponible',
     socio        VARCHAR(255),
     fecha_ingreso  TIMESTAMP,
-    fecha_vendida  TIMESTAMP
-);
+    fecha_vendida  TIMESTAMP,
+    precio_venta   VARCHAR(255)
+)
 
 -- -------------------------------------------------------
 -- Seguridad: roles y usuarios

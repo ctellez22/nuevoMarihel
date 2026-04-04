@@ -90,6 +90,7 @@ public final class PersistenceManager {
                         vendido BOOLEAN NOT NULL DEFAULT FALSE,
                         fecha_ingreso DATETIME,
                         fecha_vendida DATETIME,
+                        precio_venta VARCHAR(255),
                         estado VARCHAR(50),
                         autorizado BOOLEAN NOT NULL DEFAULT TRUE,
                         socio VARCHAR(255),
@@ -107,6 +108,7 @@ public final class PersistenceManager {
         addColumnIfMissing(em, "joya", "actualizado_en", "DATETIME NULL");
         addColumnIfMissing(em, "joya", "actualizado_por", "BIGINT NULL");
         addColumnIfMissing(em, "joya", "display_id", "VARCHAR(255) NULL");
+        addColumnIfMissing(em, "joya", "precio_venta", "VARCHAR(255) NULL");
 
         if (!indexExists(em, "joya", "uk_joya_display_id")) {
             em.createNativeQuery("CREATE UNIQUE INDEX uk_joya_display_id ON joya (display_id)").executeUpdate();
