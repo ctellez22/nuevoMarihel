@@ -15,6 +15,8 @@ import java.util.List;
 
 
 public class CargarDatos {
+    private static final String SOCIO_POR_DEFECTO = "joyeria marihel";
+
     private JTextField txtNombre;
     private JTextArea txtObs;
     private JTextField txtPeso;
@@ -122,7 +124,7 @@ public class CargarDatos {
             txtPeso.setText("");
             txtPrecioGramo.setText("");
             cmbCategoria.setSelectedIndex(0);
-            socios.setSelectedIndex(0);
+            seleccionarSocioPorDefecto();
             txtInfoPiedra.setText("");
             siCheckBox.setSelected(false);
         });
@@ -256,6 +258,7 @@ public class CargarDatos {
                 );
 
                 String mensaje = (aplicadaDirecto ? "Joya guardada correctamente:\n" : "Solicitud enviada para aprobación:\n") +
+                        "Etiqueta enviada correctamente.\n" +
                         "Nombre: " + nombre + "\n" +
                         "Precio: " + precioTotalStr + "\n" +
                         "Peso: " + peso + "\n" +
@@ -263,7 +266,7 @@ public class CargarDatos {
                         "Socio: " + socioSeleccionado + "\n" +
                         "Observaciones: " + obs;
 
-                boolean reimprimir = aplicadaDirecto;
+                boolean reimprimir = true;
                 while (reimprimir) {
                     Object[] opciones = {"Aceptar", "Volver a imprimir"};
                     int opcionSeleccionada = JOptionPane.showOptionDialog(
@@ -304,7 +307,7 @@ public class CargarDatos {
                 txtPeso.setText("");
                 txtObs.setText("");
                 cmbCategoria.setSelectedIndex(0);
-                socios.setSelectedIndex(0);
+                seleccionarSocioPorDefecto();
                 txtInfoPiedra.setText("");
                 siCheckBox.setSelected(false);
                 txtPrecioGramo.setText("");
@@ -355,9 +358,26 @@ public class CargarDatos {
             for (Socio socio : socios) {
                 this.socios.addItem(socio.getNombre());
             }
+            seleccionarSocioPorDefecto();
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(mainPanel, "No se pudieron cargar los socios: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    private void seleccionarSocioPorDefecto() {
+        if (socios == null || socios.getItemCount() == 0) {
+            return;
+        }
+
+        for (int i = 0; i < socios.getItemCount(); i++) {
+            String item = socios.getItemAt(i);
+            if (item != null && item.trim().equalsIgnoreCase(SOCIO_POR_DEFECTO)) {
+                socios.setSelectedIndex(i);
+                return;
+            }
+        }
+
+        socios.setSelectedIndex(0);
     }
 
     private void actualizarPrecioTotal() {

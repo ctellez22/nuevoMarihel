@@ -46,7 +46,7 @@ public class Controladora {
                                             Boolean tienePiedra,
                                             String infoPiedra) {
         if (session != null && !session.isAdmin()) {
-            persistencia.registrarPendienteCrearJoya(
+            Joya joyaPendiente = persistencia.registrarPendienteCrearJoya(
                     session.userId(),
                     nombre,
                     precio,
@@ -55,6 +55,18 @@ public class Controladora {
                     socio,
                     observacion,
                     Boolean.TRUE.equals(tienePiedra),
+                    infoPiedra
+            );
+
+            // Aunque quede pendiente de aprobación, se imprime la etiqueta al crearla.
+            reImprimirDespues(
+                    joyaPendiente.getId(),
+                    nombre,
+                    precio,
+                    peso,
+                    categoria,
+                    observacion,
+                    tienePiedra,
                     infoPiedra
             );
             return false;

@@ -38,7 +38,7 @@ public class ControladoraPersistencia {
         System.out.println("Joya agregada: " + nuevaJoya);
     }
 
-    public void registrarPendienteCrearJoya(Long solicitadoPor,
+    public Joya registrarPendienteCrearJoya(Long solicitadoPor,
                                             String nombre,
                                             String precio,
                                             double peso,
@@ -66,6 +66,7 @@ public class ControladoraPersistencia {
                 nuevaJoya.getPrecioVenta()
         );
         cambioPendienteRepository.crearPendiente("joya", nuevaJoya.getId(), "INSERT", null, afterJson, solicitadoPor);
+        return nuevaJoya;
     }
 
     // Editar una Joya existente
