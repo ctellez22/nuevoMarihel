@@ -10,7 +10,7 @@ import java.awt.*;
 public class Main {
     private static final String DEFAULT_DB_URL = "jdbc:mysql://marihel.ck38iw4amrdb.us-east-1.rds.amazonaws.com:3306/marihel?sslMode=REQUIRED&serverTimezone=UTC";
     private static final String DEFAULT_DB_USER = "admin";
-    private static final String DEFAULT_DB_PASSWORD = "inventario";
+    private static final String DEFAULT_DB_PASSWORD = "adminadmin";
 
     public static void main(String[] args) {
         configurarPropiedadesBDDesdeEntorno();
