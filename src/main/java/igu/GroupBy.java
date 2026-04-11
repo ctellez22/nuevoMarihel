@@ -1,5 +1,6 @@
 package igu;
 
+import com.marihel.utils.FormatterUtils;
 import logica.Categoria;
 import logica.CategoriaVerificacion;
 import logica.Controladora;
@@ -365,11 +366,11 @@ public class GroupBy {
                 detallesPanel.removeAll();
                 // Mostrar displayId preferentemente si existe
                 String idAMostrar = (joya.getDisplayId() != null && !joya.getDisplayId().isBlank()) ? joya.getDisplayId() : String.valueOf(joya.getId());
-                detallesPanel.add(crearTarjetaAtributo("ID", idAMostrar));
-                detallesPanel.add(crearTarjetaAtributo("Nombre", joya.getNombre()));
-                detallesPanel.add(crearTarjetaAtributo("Categoría", joya.getCategoria()));
-                detallesPanel.add(crearTarjetaAtributo("Peso", joya.getPeso() + " gramos"));
-                detallesPanel.add(crearTarjetaAtributo("Precio", "$" + joya.getPrecio()));
+                 detallesPanel.add(crearTarjetaAtributo("ID", idAMostrar));
+                 detallesPanel.add(crearTarjetaAtributo("Nombre", joya.getNombre()));
+                 detallesPanel.add(crearTarjetaAtributo("Categoría", joya.getCategoria()));
+                 detallesPanel.add(crearTarjetaAtributo("Peso", FormatterUtils.formatearPeso(joya.getPeso()) + " gramos"));
+                 detallesPanel.add(crearTarjetaAtributo("Precio", "$" + joya.getPrecio()));
                 detallesPanel.add(crearTarjetaAtributo("Tiene Piedra", joya.isTienePiedra() ? "Sí 💎" : "No 🪨"));
                 if (joya.isTienePiedra()) {
                     detallesPanel.add(crearTarjetaAtributo("Información de Piedra", joya.getInfoPiedra()));
@@ -466,7 +467,6 @@ public class GroupBy {
         };
         cargaCategoriasWorker.execute();
     }
-
 
 
 

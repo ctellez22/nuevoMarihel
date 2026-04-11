@@ -1,5 +1,6 @@
 package igu;
 
+import com.marihel.utils.FormatterUtils;
 import logica.Controladora;
 import logica.Joya;
 import org.example.SessionContext;
@@ -44,7 +45,7 @@ public class DetallesJoya {
         lblNombre.setText("[" + idVisible + "] " + joya.getNombre());
         lblNombre.setToolTipText("ID: " + idVisible);
         lblCategoria.setText(joya.getCategoria());
-        lblPeso.setText(joya.getPeso() + " gramos");
+        lblPeso.setText(FormatterUtils.formatearPeso(joya.getPeso()) + " gramos");
         lblPrecio.setText("$" + joya.getPrecio());
         lblTienePiedra.setText(joya.isTienePiedra() ? "Sí 💎" : "No 🪨");
         DateTimeFormatter formatterr = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");

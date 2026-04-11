@@ -1,5 +1,6 @@
 package igu;
 
+import com.marihel.utils.FormatterUtils;
 import logica.Joya;
 
 import javax.swing.*;
@@ -74,7 +75,7 @@ public class JoyaListCellRenderer extends JPanel implements ListCellRenderer<Joy
         lblNombre.setText("[" + idVisible + "] " + joya.getNombre());
         lblNombre.setToolTipText("ID: " + idVisible);
         lblPrecio.setText("Precio: $" + joya.getPrecio());
-        lblPeso.setText("Peso: " + joya.getPeso() + " gramos");
+        lblPeso.setText("Peso: " + FormatterUtils.formatearPeso(joya.getPeso()) + " gramos");
         lblAutorizacion.setText("Autorización: " + joya.getEstadoAutorizacionTexto());
         lblAutorizacion.setForeground(joya.isAutorizado() ? new Color(34, 139, 34) : new Color(204, 128, 0));
 
