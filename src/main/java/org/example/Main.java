@@ -6,11 +6,19 @@ import persistencia.PersistenceManager;
 
 import javax.swing.*;
 import java.awt.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.LinkedHashSet;
+import java.util.Properties;
+import java.util.Set;
 
 public class Main {
-    private static final String DEFAULT_DB_URL = "jdbc:mysql://marihel.ck38iw4amrdb.us-east-1.rds.amazonaws.com:3306/marihel?sslMode=REQUIRED&serverTimezone=UTC";
-    private static final String DEFAULT_DB_USER = "admin";
-    private static final String DEFAULT_DB_PASSWORD = "adminadmin";
+    private static final String APP_NAME = "Marihel";
+    private static final String DEFAULT_DB_URL = "jdbc:mysql://metro.proxy.rlwy.net:38179/railway?sslMode=REQUIRED&serverTimezone=UTC";
+    private static final String DEFAULT_DB_USER = "root";
+    private static final String DEFAULT_DB_PASSWORD = "MZemUaMJeOJDNanLLCHQseOlfgZQEjjR";
 
     public static void main(String[] args) {
         configurarPropiedadesBDDesdeEntorno();
@@ -91,6 +99,11 @@ public class Main {
     }
 
     private static void configurarPropiedadesBDDesdeEntorno() {
+        Properties config = cargarConfiguracionExterna();
+
+        aplicarDesdeConfigSiExiste("db.url", config, "db.url");
+        aplicarDesdeConfigSiExiste("db.user", config, "db.user");
+        aplicarDesdeConfigSiExiste("db.password", config, "db.password");
         aplicarSiExiste("db.url", "DB_URL");
         aplicarSiExiste("db.user", "DB_USER");
         aplicarSiExiste("db.password", "DB_PASSWORD");
@@ -112,10 +125,56 @@ public class Main {
         }
     }
 
+    private static void aplicarDesdeConfigSiExiste(String systemProperty, Properties config, String propertyKey) {
+        String valor = config.getProperty(propertyKey);
+        if (valor != null && !valor.isBlank()) {
+            System.setProperty(systemProperty, valor.trim());
+        }
+    }
+
+    private static Properties cargarConfiguracionExterna() {
+        Properties properties = new Properties();
+        for (Path ruta : obtenerRutasConfiguracion()) {
+            if (!Files.isRegularFile(ruta)) {
+                continue;
+            }
+            try (InputStream inputStream = Files.newInputStream(ruta)) {
+                properties.load(inputStream);
+                return properties;
+            } catch (IOException e) {
+                throw new IllegalStateException("No se pudo leer la configuración de la app en: " + ruta, e);
+            }
+        }
+        return properties;
+    }
+
+    private static Set<Path> obtenerRutasConfiguracion() {
+        Set<Path> rutas = new LinkedHashSet<>();
+
+        agregarRutaSiExiste(rutas, System.getProperty("app.config"));
+        agregarRutaSiExiste(rutas, System.getenv("APP_CONFIG"));
+
+        String userHome = System.getProperty("user.home");
+        if (userHome != null && !userHome.isBlank()) {
+            Path home = Path.of(userHome);
+            rutas.add(home.resolve("Library").resolve("Application Support").resolve(APP_NAME).resolve("config.properties"));
+            rutas.add(home.resolve(".marihel").resolve("config.properties"));
+        }
+
+        rutas.add(Path.of("config.properties"));
+        return rutas;
+    }
+
+    private static void agregarRutaSiExiste(Set<Path> rutas, String valor) {
+        if (valor != null && !valor.isBlank()) {
+            rutas.add(Path.of(valor.trim()));
+        }
+    }
+
     private static void validarRequerida(String systemProperty, String envVar) {
         String actual = System.getProperty(systemProperty);
         if (actual == null || actual.isBlank()) {
-            throw new IllegalStateException("Falta configuración de base de datos. Define la variable " + envVar + ".");
+            throw new IllegalStateException("Falta configuración de base de datos. Define la variable " + envVar + " o crea ~/Library/Application Support/" + APP_NAME + "/config.properties.");
         }
     }
 

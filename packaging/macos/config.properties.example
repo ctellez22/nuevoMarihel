@@ -1,0 +1,9 @@
+# Copia este archivo a:
+# ~/Library/Application Support/Marihel/config.properties
+#
+# Ajusta los valores según tu ambiente.
+
+db.url=jdbc:mysql://metro.proxy.rlwy.net:38179/railway?sslMode=REQUIRED&serverTimezone=UTC
+db.user=root
+db.password=MZemUaMJeOJDNanLLCHQseOlfgZQEjjR
+
