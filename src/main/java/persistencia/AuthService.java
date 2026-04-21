@@ -8,7 +8,7 @@ import java.util.List;
 
 public class AuthService {
 
-    public SessionContext authenticate(String username, String plainPassword) {
+    public SessionContext authenticate(String username, String plainPassword, SessionContext.Tienda tienda) {
         if (username == null || username.isBlank() || plainPassword == null || plainPassword.isBlank()) {
             return null;
         }
@@ -45,7 +45,7 @@ public class AuthService {
             updateLogin.executeUpdate();
             em.getTransaction().commit();
 
-            return new SessionContext(userId, normalizedUsername, role);
+            return new SessionContext(userId, normalizedUsername, role, tienda);
         } catch (RuntimeException ex) {
             if (em.getTransaction().isActive()) {
                 em.getTransaction().rollback();

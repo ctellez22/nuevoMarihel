@@ -294,7 +294,7 @@
         <properties/>
         <border type="none"/>
         <children>
-          <component id="f6341" class="javax.swing.JScrollBar" binding="scrollBar1" default-binding="true">
+          <component id="f6341" class="javax.swing.JScrollBar">
             <constraints/>
             <properties/>
           </component>

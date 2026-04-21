@@ -60,6 +60,7 @@ public final class PersistenceManager {
 
             ensureJoyaSchema(em);
             ensureCambioPendienteSchema(em);
+            addColumnIfMissing(em, "socio", "tienda", "VARCHAR(50) NULL");
 
             em.getTransaction().commit();
         } catch (RuntimeException e) {
@@ -71,6 +72,75 @@ public final class PersistenceManager {
             if (em.isOpen()) {
                 em.close();
             }
+        }
+    }
+
+    /** Crea las tablas de Queens si no existen. Llamar cuando se selecciona Queens. */
+    public static void ensureQueensSchema() {
+        EntityManager em = createEntityManager();
+        try {
+            em.getTransaction().begin();
+            ensureQueensJoyaSchema(em);
+            // queens_categoria no existe: Queens comparte la tabla 'categoria' con Marihel
+            em.getTransaction().commit();
+        } catch (RuntimeException e) {
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
+            throw new IllegalStateException("No se pudo sincronizar el esquema de Queens.", e);
+        } finally {
+            if (em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    private static void ensureQueensJoyaSchema(EntityManager em) {
+        if (!tableExists(em, "queens_Joya")) {
+            em.createNativeQuery("""
+                    CREATE TABLE queens_Joya (
+                        id BIGINT NOT NULL AUTO_INCREMENT,
+                        nombre VARCHAR(255),
+                        precio VARCHAR(255),
+                        peso DOUBLE NOT NULL DEFAULT 0,
+                        categoria VARCHAR(255),
+                        observacion VARCHAR(255),
+                        tiene_piedra BOOLEAN NOT NULL DEFAULT FALSE,
+                        info_piedra VARCHAR(255),
+                        fue_editada BOOLEAN NOT NULL DEFAULT FALSE,
+                        vendido BOOLEAN NOT NULL DEFAULT FALSE,
+                        fecha_ingreso DATETIME,
+                        fecha_vendida DATETIME,
+                        precio_venta VARCHAR(255),
+                        estado VARCHAR(50),
+                        autorizado BOOLEAN NOT NULL DEFAULT TRUE,
+                        socio VARCHAR(255),
+                        display_id VARCHAR(255),
+                        actualizado_en DATETIME,
+                        actualizado_por BIGINT,
+                        PRIMARY KEY (id),
+                        UNIQUE KEY uk_queens_joya_display_id (display_id)
+                    )
+                    """).executeUpdate();
+        } else {
+            addColumnIfMissing(em, "queens_Joya", "precio_venta", "VARCHAR(255) NULL");
+            addColumnIfMissing(em, "queens_Joya", "autorizado",   "BOOLEAN NOT NULL DEFAULT TRUE");
+            addColumnIfMissing(em, "queens_Joya", "display_id",   "VARCHAR(255) NULL");
+            addColumnIfMissing(em, "queens_Joya", "actualizado_en",  "DATETIME NULL");
+            addColumnIfMissing(em, "queens_Joya", "actualizado_por", "BIGINT NULL");
+            addColumnIfMissing(em, "queens_Joya", "socio",        "VARCHAR(255) NULL");
+        }
+    }
+
+    private static void ensureQueensCategoriaSchema(EntityManager em) {
+        if (!tableExists(em, "queens_categoria")) {
+            em.createNativeQuery("""
+                    CREATE TABLE queens_categoria (
+                        id BIGINT NOT NULL AUTO_INCREMENT,
+                        nombre VARCHAR(255) NOT NULL,
+                        PRIMARY KEY (id)
+                    )
+                    """).executeUpdate();
         }
     }
 

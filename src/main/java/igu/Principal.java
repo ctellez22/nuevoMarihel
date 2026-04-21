@@ -4,15 +4,12 @@ import org.example.SessionContext;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-
 
 public class Principal {
     private JButton cargarDatosButton;
     private JButton verDatosButton;
     private JButton salirButton;
-    private JPanel mainPanel; // Contenedor principal de la ventana
+    private JPanel mainPanel;
     private JButton GROUP_BYButton;
     private JPanel panelFoto;
     private JButton categorias;
@@ -26,29 +23,111 @@ public class Principal {
 
     public Principal(SessionContext session) {
         this.session = session;
+        construirUI();
+        registrarAcciones();
+        aplicarPermisosPorRol();
+    }
 
-        //Cargar una imagen en panelFoto al iniciar
+    // ── Construcción de la UI en código puro (sin dependencia del compilador de forms) ──
+
+    private void construirUI() {
+        mainPanel = new JPanel(new BorderLayout(12, 12));
+        mainPanel.setBackground(UITheme.BG);
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        // ── Panel central (foto + título + versión) ─────────────────────────────
+        JPanel centerPanel = new JPanel(new BorderLayout(8, 8));
+        centerPanel.setBackground(UITheme.BG);
+
+        JLabel titleLabel = new JLabel("Inventario", SwingConstants.CENTER);
+        titleLabel.setFont(UITheme.F_TITLE);
+        titleLabel.setForeground(UITheme.TEXT);
+        centerPanel.add(titleLabel, BorderLayout.NORTH);
+
+        panelFoto = new JPanel(new BorderLayout());
+        panelFoto.setBackground(UITheme.BG);
         cargarImagenEnPanelFoto();
+        centerPanel.add(panelFoto, BorderLayout.CENTER);
 
+        JLabel versionLabel = new JLabel("@CamTe 1.5.7", SwingConstants.CENTER);
+        versionLabel.setFont(UITheme.F_SMALL);
+        versionLabel.setForeground(UITheme.TEXT_MUTED);
+        centerPanel.add(versionLabel, BorderLayout.SOUTH);
 
-        // Acción para el botón "Cargar Datos"
-        cargarDatosButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                // Crear y mostrar la ventana de cargar datos
-                JFrame frame = new JFrame("Cargar Datos");
-                frame.setContentPane(new CargarDatos(null, session).getMainPanel());
-                frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); // Cerrar solo esta ventana
-                frame.setSize(800, 800);
-                frame.setLocationRelativeTo(null);
-                frame.setVisible(true);
+        mainPanel.add(centerPanel, BorderLayout.CENTER);
 
+        // ── Panel de botones (derecha) ──────────────────────────────────────────
+        JPanel buttonsPanel = new JPanel();
+        buttonsPanel.setLayout(new BoxLayout(buttonsPanel, BoxLayout.Y_AXIS));
+        buttonsPanel.setBackground(UITheme.BG);
+        buttonsPanel.setBorder(BorderFactory.createCompoundBorder(
+                UITheme.roundedBorder(UITheme.BORDER, 14),
+                BorderFactory.createEmptyBorder(16, 12, 16, 12)
+        ));
 
+        cargarDatosButton = crearBotonPrimary("Cargar Datos", "/file.png");
+        verDatosButton    = crearBotonPrimary("Ver Datos",    "/Ver.png");
+        GROUP_BYButton    = crearBotonPrimary("Group By",     "/espia.png");
+        ventas            = crearBotonSecondary("Ventas");
+        socios            = crearBotonSecondary("Socios");
+        categorias        = crearBotonSecondary("Categorías");
+        salirButton       = UITheme.dangerBtn("Salir");
+        salirButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        salirButton.setPreferredSize(new Dimension(150, 36));
+        salirButton.setMaximumSize(new Dimension(160, 38));
 
-            }
+        buttonsPanel.add(cargarDatosButton);
+        buttonsPanel.add(Box.createVerticalStrut(6));
+        buttonsPanel.add(verDatosButton);
+        buttonsPanel.add(Box.createVerticalStrut(6));
+        buttonsPanel.add(GROUP_BYButton);
+        buttonsPanel.add(Box.createVerticalStrut(12));
+        buttonsPanel.add(ventas);
+        buttonsPanel.add(Box.createVerticalStrut(4));
+        buttonsPanel.add(socios);
+        buttonsPanel.add(Box.createVerticalStrut(4));
+        buttonsPanel.add(categorias);
+        buttonsPanel.add(Box.createVerticalGlue());
+        buttonsPanel.add(salirButton);
+
+        mainPanel.add(buttonsPanel, BorderLayout.EAST);
+    }
+
+    private JButton crearBotonPrimary(String texto, String iconPath) {
+        JButton btn = UITheme.primaryBtn(texto);
+        btn.setAlignmentX(Component.CENTER_ALIGNMENT);
+        btn.setPreferredSize(new Dimension(150, 36));
+        btn.setMaximumSize(new Dimension(160, 38));
+        if (iconPath != null) {
+            try {
+                ImageIcon icon = new ImageIcon(getClass().getResource(iconPath));
+                Image scaled = icon.getImage().getScaledInstance(16, 16, Image.SCALE_SMOOTH);
+                btn.setIcon(new ImageIcon(scaled));
+            } catch (Exception ignored) {}
+        }
+        return btn;
+    }
+
+    private JButton crearBotonSecondary(String texto) {
+        JButton btn = UITheme.secondaryBtn(texto);
+        btn.setAlignmentX(Component.CENTER_ALIGNMENT);
+        btn.setPreferredSize(new Dimension(150, 36));
+        btn.setMaximumSize(new Dimension(160, 38));
+        return btn;
+    }
+
+    // ── Acciones ────────────────────────────────────────────────────────────────
+
+    private void registrarAcciones() {
+        cargarDatosButton.addActionListener(e -> {
+            JFrame frame = new JFrame("Cargar Datos");
+            frame.setContentPane(new CargarDatos(null, session).getMainPanel());
+            frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+            frame.setSize(800, 800);
+            frame.setLocationRelativeTo(null);
+            frame.setVisible(true);
         });
 
-        // Acción para el botón "Ver Datos" (implementa según necesidad)
         verDatosButton.addActionListener(e -> {
             JFrame frame = new JFrame("Ver Datos");
             frame.setContentPane(new VerDatos(null, session).getMainPanel());
@@ -56,7 +135,7 @@ public class Principal {
             frame.setLocationRelativeTo(null);
             frame.setVisible(true);
         });
-        // Acción para el botón "Contar"
+
         GROUP_BYButton.addActionListener(e -> {
             if (session != null && session.isAdmin()) {
                 Object[] opciones = {"Group By", "Aprobaciones"};
@@ -84,45 +163,37 @@ public class Principal {
             frame.setVisible(true);
         });
 
-        // Acción para el botón "Salir"
         salirButton.addActionListener(e -> System.exit(0));
 
-        // Acción para el botón "Categorías"
         categorias.addActionListener(e -> {
             JFrame frame = new JFrame("Categorías");
-            frame.setContentPane(new Categorias(null).getMainPanel());
+            frame.setContentPane(new Categorias(null, session).getMainPanel());
             frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
             frame.setSize(700, 500);
             frame.setLocationRelativeTo(null);
             frame.setVisible(true);
         });
 
-        // Acción para el botón "Socios"
         socios.addActionListener(e -> {
             JFrame frame = new JFrame("Socios");
-            frame.setContentPane(new Socios(null).getMainPanel());
+            frame.setContentPane(new Socios(null, session).getMainPanel());
             frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
             frame.setSize(700, 500);
             frame.setLocationRelativeTo(null);
             frame.setVisible(true);
         });
 
-        // Acción para el botón "Ventas"
         ventas.addActionListener(e -> {
             VentasDialog dialog = new VentasDialog(
-                    (java.awt.Frame) SwingUtilities.getWindowAncestor(mainPanel),
+                    (Frame) SwingUtilities.getWindowAncestor(mainPanel),
                     session
             );
             dialog.setVisible(true);
         });
-
-        aplicarPermisosPorRol();
     }
 
     private void aplicarPermisosPorRol() {
-        if (session == null) {
-            return;
-        }
+        if (session == null) return;
         boolean esAdmin = session.isAdmin();
         categorias.setEnabled(esAdmin);
         socios.setEnabled(esAdmin);
@@ -130,33 +201,16 @@ public class Principal {
     }
 
     private void cargarImagenEnPanelFoto() {
-        // Ruta de la imagen (ajusta la ruta según la ubicación de tu imagen)
-        String imagePath = "/aca.png";
-
         try {
-            // Cargar y escalar la imagen
-            ImageIcon originalIcon = new ImageIcon(getClass().getResource(imagePath));
-            Image scaledImage = originalIcon.getImage().getScaledInstance(280, 280, Image.SCALE_SMOOTH);
-            ImageIcon scaledIcon = new ImageIcon(scaledImage);
-
-            // Crear un JLabel con la imagen
-            JLabel imageLabel = new JLabel(scaledIcon);
-            imageLabel.setHorizontalAlignment(SwingConstants.CENTER);
-
-            // Configurar el panelFoto para mostrar la imagen
-            panelFoto.setLayout(new BorderLayout());
-            panelFoto.add(imageLabel, BorderLayout.CENTER);
-            panelFoto.revalidate(); // Asegurar que el panel se actualice
-            panelFoto.repaint();   // Redibujar el panel
+            ImageIcon icon = new ImageIcon(getClass().getResource("/aca.png"));
+            Image scaled = icon.getImage().getScaledInstance(260, 260, Image.SCALE_SMOOTH);
+            JLabel lbl = new JLabel(new ImageIcon(scaled));
+            lbl.setHorizontalAlignment(SwingConstants.CENTER);
+            panelFoto.add(lbl, BorderLayout.CENTER);
         } catch (Exception e) {
-            // Mostrar un mensaje si no se encuentra la imagen
-            JLabel errorLabel = new JLabel("Imagen no disponible");
-            errorLabel.setHorizontalAlignment(SwingConstants.CENTER);
-            errorLabel.setForeground(Color.RED);
-            panelFoto.setLayout(new BorderLayout());
-            panelFoto.add(errorLabel, BorderLayout.CENTER);
-            panelFoto.revalidate();
-            panelFoto.repaint();
+            JLabel lbl = new JLabel("Imagen no disponible", SwingConstants.CENTER);
+            lbl.setForeground(UITheme.TEXT_MUTED);
+            panelFoto.add(lbl, BorderLayout.CENTER);
         }
     }
 

@@ -28,7 +28,7 @@ public class AprobacionesDialog extends JDialog {
         if (session == null || !session.isAdmin()) {
             throw new IllegalStateException("Solo un administrador puede abrir el panel de aprobaciones.");
         }
-        this.controladora = new Controladora();
+        this.controladora = new Controladora(session);
         this.session = session;
         this.listModel = new DefaultListModel<>();
         this.listPendientes = new JList<>(listModel);

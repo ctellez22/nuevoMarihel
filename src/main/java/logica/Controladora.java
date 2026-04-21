@@ -11,9 +11,14 @@ public class Controladora {
 
     private final ControladoraPersistencia persistencia;
 
-    // Constructor
+    // Constructor sin sesión (Marihel por defecto)
     public Controladora() {
         this.persistencia = new ControladoraPersistencia();
+    }
+
+    // Constructor con sesión: usa la tienda seleccionada
+    public Controladora(SessionContext session) {
+        this.persistencia = new ControladoraPersistencia(session != null ? session.tienda() : null);
     }
 
     // Métodos de lógica que usan la persistencia

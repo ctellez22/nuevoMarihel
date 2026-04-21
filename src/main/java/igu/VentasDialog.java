@@ -64,7 +64,7 @@ public class VentasDialog extends JDialog {
     public VentasDialog(Frame owner, SessionContext session) {
         super(owner, "Reporte de Ventas", true);
         this.session = session;
-        this.controladora = new Controladora();
+        this.controladora = new Controladora(session);
 
         setSize(1150, 700);
         setLocationRelativeTo(owner);

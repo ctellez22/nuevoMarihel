@@ -1,6 +1,7 @@
 package org.example;
 
 import igu.Principal;
+import igu.TiendaSelectorDialog;
 import persistencia.AuthService;
 import persistencia.PersistenceManager;
 
@@ -33,9 +34,27 @@ public class Main {
 
         Runtime.getRuntime().addShutdownHook(new Thread(PersistenceManager::shutdown));
 
+        // Seleccionar joyería
+        TiendaSelectorDialog selector = new TiendaSelectorDialog();
+        selector.setVisible(true);
+        SessionContext.Tienda tienda = selector.getTiendaSeleccionada();
+        if (tienda == null) {
+            return; // El usuario cerró el selector sin elegir
+        }
+
+        // Asegurar tablas de la joyería seleccionada
+        if (tienda == SessionContext.Tienda.QUEENS) {
+            try {
+                PersistenceManager.ensureQueensSchema();
+            } catch (IllegalStateException e) {
+                JOptionPane.showMessageDialog(null, e.getMessage(), "Error de esquema", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+        }
+
         SessionContext session;
         try {
-            session = solicitarSesion();
+            session = solicitarSesion(tienda);
         } catch (IllegalStateException e) {
             JOptionPane.showMessageDialog(null, e.getMessage(), "Error de autenticación", JOptionPane.ERROR_MESSAGE);
             return;
@@ -48,7 +67,8 @@ public class Main {
         // Ejecutar la GUI en el Event Dispatch Thread (EDT)
         SessionContext finalSession = session;
         SwingUtilities.invokeLater(() -> {
-            JFrame frame = new JFrame("Principal - " + finalSession.username() + " (" + finalSession.role() + ")");
+            String titulo = finalSession.tienda().displayName() + " - " + finalSession.username() + " (" + finalSession.role() + ")";
+            JFrame frame = new JFrame(titulo);
             frame.setContentPane(new Principal(finalSession).getMainPanel());
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             frame.setSize(800, 410);
@@ -57,7 +77,7 @@ public class Main {
         });
     }
 
-    private static SessionContext solicitarSesion() {
+    private static SessionContext solicitarSesion(SessionContext.Tienda tienda) {
         AuthService authService = new AuthService();
 
         while (true) {
@@ -72,7 +92,7 @@ public class Main {
             int result = JOptionPane.showConfirmDialog(
                     null,
                     panel,
-                    "Iniciar sesión",
+                    "Iniciar sesión — " + tienda.displayName(),
                     JOptionPane.OK_CANCEL_OPTION,
                     JOptionPane.PLAIN_MESSAGE
             );
@@ -84,7 +104,7 @@ public class Main {
             String usuario = usuarioField.getText();
             String password = new String(passwordField.getPassword());
 
-            SessionContext session = authService.authenticate(usuario, password);
+            SessionContext session = authService.authenticate(usuario, password, tienda);
             if (session != null) {
                 return session;
             }

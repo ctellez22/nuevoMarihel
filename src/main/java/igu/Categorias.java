@@ -2,6 +2,7 @@ package igu;
 
 import logica.Categoria;
 import logica.Controladora;
+import org.example.SessionContext;
 
 import javax.swing.*;
 import java.awt.*;
@@ -15,35 +16,57 @@ public class Categorias {
     private final Controladora controladora;
 
     public Categorias(JFrame parent) {
-        this.controladora = new Controladora();
+        this(parent, null);
+    }
+
+    public Categorias(JFrame parent, SessionContext session) {
+        this.controladora = new Controladora(session);
 
         this.mainPanel = new JPanel(new BorderLayout(12, 12));
-        this.mainPanel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        this.mainPanel.setBackground(UITheme.BG);
+        this.mainPanel.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
 
+        // ── Panel superior ───────────────────────────────────────────────────────
         JPanel panelSuperior = new JPanel(new BorderLayout(8, 8));
+        panelSuperior.setBackground(UITheme.BG);
+
         JLabel lblNombre = new JLabel("Nueva categoría:");
+        lblNombre.setFont(UITheme.F_LABEL);
+        lblNombre.setForeground(UITheme.TEXT);
+
         this.txtNombre = new JTextField();
-        JButton btnGuardar = new JButton("Guardar");
-        JButton btnEliminar = new JButton("Eliminar");
-        JButton btnRefrescar = new JButton("Refrescar");
+        UITheme.styleField(this.txtNombre);
+
+        JButton btnGuardar   = UITheme.primaryBtn("Guardar");
+        JButton btnEliminar  = UITheme.dangerBtn("Eliminar");
+        JButton btnRefrescar = UITheme.secondaryBtn("Refrescar");
 
         JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        panelBotones.setBackground(UITheme.BG);
         panelBotones.add(btnRefrescar);
         panelBotones.add(btnEliminar);
         panelBotones.add(btnGuardar);
 
-        panelSuperior.add(lblNombre, BorderLayout.WEST);
-        panelSuperior.add(txtNombre, BorderLayout.CENTER);
+        panelSuperior.add(lblNombre,    BorderLayout.WEST);
+        panelSuperior.add(txtNombre,    BorderLayout.CENTER);
         panelSuperior.add(panelBotones, BorderLayout.EAST);
 
+        // ── Lista ────────────────────────────────────────────────────────────────
         this.listModel = new DefaultListModel<>();
         JList<String> listCategorias = new JList<>(listModel);
-        JScrollPane scrollPane = new JScrollPane(listCategorias);
-        scrollPane.setBorder(BorderFactory.createTitledBorder("Categorías registradas"));
+        listCategorias.setFont(UITheme.F_BODY);
+        listCategorias.setBackground(UITheme.BG);
+        listCategorias.setForeground(UITheme.TEXT);
+        listCategorias.setSelectionBackground(UITheme.ACCENT);
+        listCategorias.setSelectionForeground(Color.WHITE);
+        listCategorias.setFixedCellHeight(32);
+
+        JScrollPane scrollPane = UITheme.styledScroll(listCategorias);
 
         this.mainPanel.add(panelSuperior, BorderLayout.NORTH);
-        this.mainPanel.add(scrollPane, BorderLayout.CENTER);
+        this.mainPanel.add(scrollPane,    BorderLayout.CENTER);
 
+        // ── Listeners ────────────────────────────────────────────────────────────
         btnGuardar.addActionListener(e -> guardarCategoria());
         btnEliminar.addActionListener(e -> eliminarCategoriaSeleccionada(listCategorias));
         btnRefrescar.addActionListener(e -> cargarCategorias());

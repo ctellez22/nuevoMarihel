@@ -24,15 +24,15 @@ public class VerDatos {
     private JTextField txtId;
     private JCheckBox categoriaCheckBox;
     private JComboBox<String> comboBoxCategoria;
-    private JCheckBox socioCheckBox;
-    private JComboBox<String> comboBoxSocio;
+    private JCheckBox socioCheckBox;       // null intencional — no se usa en esta versión del form
+    private JComboBox<String> comboBoxSocio; // null intencional
     private JCheckBox nombreCheckBox;
     private JTextField txtNombre;
     private JList<Joya> lstResultados;
     private JPanel panelFoto;
     private JCheckBox noVendidoCheckBox;
     private JComboBox<String> cmbEstado;
-    private JCheckBox noAnuladoCheckBox;
+    private JCheckBox noAnuladoCheckBox;   // null intencional — se ocultaba en el form original
     private DefaultListModel<Joya> listModel;
 
     private Controladora controladora;
@@ -47,31 +47,131 @@ public class VerDatos {
 
     public VerDatos(JFrame parent, SessionContext session) {
         this.session = session;
+        construirUI();
         inicializarTodo();
         programarActualizacionLista();
     }
 
-    private void inicializarTodo() {
-        controladora = new Controladora();
+    // ── Construcción de la UI en código puro ─────────────────────────────────
 
-        if (noAnuladoCheckBox != null) {
-            noAnuladoCheckBox.setVisible(false);
-        }
+    private void construirUI() {
+        mainPanel = new JPanel(new BorderLayout(8, 8));
+        mainPanel.setBackground(UITheme.BG);
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+
+        // Título
+        JLabel titleLabel = new JLabel("Inventario:", SwingConstants.CENTER);
+        titleLabel.setFont(UITheme.F_TITLE);
+        titleLabel.setForeground(UITheme.TEXT);
+        mainPanel.add(titleLabel, BorderLayout.NORTH);
+
+        // ── Barra de filtros ─────────────────────────────────────────────────
+        JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 6));
+        filterPanel.setBackground(UITheme.BG);
+        filterPanel.setBorder(BorderFactory.createCompoundBorder(
+                UITheme.roundedBorder(UITheme.BORDER, 12),
+                BorderFactory.createEmptyBorder(4, 8, 4, 8)
+        ));
+
+        idCheckBox = new JCheckBox("id:", true);
+        idCheckBox.setFont(UITheme.F_FILTER);
+        idCheckBox.setForeground(UITheme.TEXT);
+        idCheckBox.setBackground(UITheme.BG);
+
+        txtId = UITheme.styledField();
+        txtId.setPreferredSize(new Dimension(80, 28));
+        filterPanel.add(idCheckBox);
+        filterPanel.add(txtId);
+
+        filterPanel.add(new JSeparator(JSeparator.VERTICAL));
+
+        categoriaCheckBox = new JCheckBox("Categoría");
+        categoriaCheckBox.setFont(UITheme.F_FILTER);
+        categoriaCheckBox.setForeground(UITheme.TEXT);
+        categoriaCheckBox.setBackground(UITheme.BG);
+        comboBoxCategoria = new JComboBox<>();
+        comboBoxCategoria.addItem("Todos");
+        UITheme.styleCombo(comboBoxCategoria);
+        filterPanel.add(categoriaCheckBox);
+        filterPanel.add(comboBoxCategoria);
+
+        filterPanel.add(new JSeparator(JSeparator.VERTICAL));
+
+        nombreCheckBox = new JCheckBox("Nombre");
+        nombreCheckBox.setFont(UITheme.F_FILTER);
+        nombreCheckBox.setForeground(UITheme.TEXT);
+        nombreCheckBox.setBackground(UITheme.BG);
+        txtNombre = UITheme.styledField();
+        txtNombre.setPreferredSize(new Dimension(100, 28));
+        filterPanel.add(nombreCheckBox);
+        filterPanel.add(txtNombre);
+
+        filterPanel.add(new JSeparator(JSeparator.VERTICAL));
+
+        noVendidoCheckBox = new JCheckBox("No incluir vendido", true);
+        noVendidoCheckBox.setFont(UITheme.F_FILTER);
+        noVendidoCheckBox.setForeground(UITheme.TEXT);
+        noVendidoCheckBox.setBackground(UITheme.BG);
+        filterPanel.add(noVendidoCheckBox);
+
+        filterPanel.add(new JSeparator(JSeparator.VERTICAL));
+
+        cmbEstado = new JComboBox<>();
+        UITheme.styleCombo(cmbEstado);
+        JLabel estadoLabel = new JLabel("Estado:");
+        estadoLabel.setFont(UITheme.F_LABEL);
+        estadoLabel.setForeground(UITheme.TEXT);
+        filterPanel.add(estadoLabel);
+        filterPanel.add(cmbEstado);
+
+        // ── Área central: foto + lista ───────────────────────────────────────
+        panelFoto = new JPanel(new BorderLayout());
+        panelFoto.setBackground(UITheme.BG);
+        panelFoto.setPreferredSize(new Dimension(310, 310));
+
+        listModel = new DefaultListModel<>();
+        lstResultados = new JList<>(listModel);
+        lstResultados.setFont(UITheme.F_BODY);
+        lstResultados.setBackground(UITheme.BG);
+        lstResultados.setSelectionBackground(UITheme.ACCENT);
+        lstResultados.setSelectionForeground(Color.WHITE);
+        lstResultados.setFixedCellHeight(32);
+
+        JSplitPane splitPane = new JSplitPane(
+                JSplitPane.HORIZONTAL_SPLIT,
+                panelFoto,
+                UITheme.styledScroll(lstResultados)
+        );
+        splitPane.setDividerLocation(320);
+        splitPane.setResizeWeight(0.22);
+        splitPane.setBackground(UITheme.BG);
+        splitPane.setDividerSize(1);
+
+        JPanel centerArea = new JPanel(new BorderLayout(4, 4));
+        centerArea.setBackground(UITheme.BG);
+        centerArea.add(filterPanel, BorderLayout.NORTH);
+        centerArea.add(splitPane, BorderLayout.CENTER);
+
+        mainPanel.add(centerArea, BorderLayout.CENTER);
+    }
+
+    // ── Inicialización de lógica ──────────────────────────────────────────────
+
+    private void inicializarTodo() {
+        controladora = new Controladora(session);
+
+        // noAnuladoCheckBox es null (no está en la UI), el código ya lo null-chequea
 
         inicializarOpcionesDeFiltro();
 
         try {
-            ImageIcon originalIcon = new ImageIcon(getClass().getResource("/gestion-de-materiales.png"));
-            Image scaledImage = originalIcon.getImage().getScaledInstance(300, 300, Image.SCALE_SMOOTH);
-            ImageIcon scaledIcon = new ImageIcon(scaledImage);
-            JLabel imageLabel = new JLabel(scaledIcon);
+            ImageIcon icon = new ImageIcon(getClass().getResource("/gestion-de-materiales.png"));
+            Image scaled = icon.getImage().getScaledInstance(300, 300, Image.SCALE_SMOOTH);
+            JLabel imageLabel = new JLabel(new ImageIcon(scaled));
             imageLabel.setHorizontalAlignment(SwingConstants.CENTER);
-            panelFoto.setLayout(new BorderLayout());
             panelFoto.add(imageLabel, BorderLayout.CENTER);
-        } catch (Exception ignored) {
-        }
+        } catch (Exception ignored) {}
 
-        listModel = new DefaultListModel<>();
         lstResultados.setModel(listModel);
         lstResultados.setCellRenderer(new JoyaListCellRenderer());
 
@@ -89,9 +189,6 @@ public class VerDatos {
     }
 
     private void inicializarOpcionesDeFiltro() {
-        if (cmbEstado == null) {
-            return;
-        }
         DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>();
         model.addElement("Todos");
         model.addElement("Estado: Disponible");
@@ -141,20 +238,9 @@ public class VerDatos {
         }
 
         txtNombre.getDocument().addDocumentListener(new DocumentListener() {
-            @Override
-            public void insertUpdate(DocumentEvent e) {
-                programarActualizacionLista();
-            }
-
-            @Override
-            public void removeUpdate(DocumentEvent e) {
-                programarActualizacionLista();
-            }
-
-            @Override
-            public void changedUpdate(DocumentEvent e) {
-                programarActualizacionLista();
-            }
+            @Override public void insertUpdate(DocumentEvent e) { programarActualizacionLista(); }
+            @Override public void removeUpdate(DocumentEvent e) { programarActualizacionLista(); }
+            @Override public void changedUpdate(DocumentEvent e) { programarActualizacionLista(); }
         });
 
         noVendidoCheckBox.addActionListener(e -> programarActualizacionLista());
@@ -172,6 +258,8 @@ public class VerDatos {
         });
     }
 
+    // ── Lógica de filtrado (sin cambios) ─────────────────────────────────────
+
     public void actualizarListaFiltradaa() {
         actualizarListaFiltrada();
     }
@@ -188,7 +276,8 @@ public class VerDatos {
 
     private void ejecutarFiltro(boolean mostrarAviso) {
         boolean filterById = idCheckBox.isSelected() && !txtId.getText().isEmpty();
-        boolean filterByCategory = categoriaCheckBox.isSelected() && comboBoxCategoria.getSelectedItem() != null
+        boolean filterByCategory = categoriaCheckBox.isSelected()
+                && comboBoxCategoria.getSelectedItem() != null
                 && !comboBoxCategoria.getSelectedItem().toString().equalsIgnoreCase("Todos");
         boolean filterBySocio = socioCheckBox != null && comboBoxSocio != null
                 && socioCheckBox.isSelected()
@@ -246,34 +335,18 @@ public class VerDatos {
                 if (filterByPendienteAutorizacion) {
                     List<Joya> pendientesBD = resultado.stream().filter(j -> !j.isAutorizado()).toList();
                     List<Joya> pendientesInsert = construirJoyasPendientesInsert(
-                            filterById,
-                            id,
-                            filterByCategory,
-                            categoria,
-                            filterBySocio,
-                            socio,
-                            filterByName,
-                            nombre,
-                            filterByNoVendido,
-                            estadoFinal
-                    );
+                            filterById, id, filterByCategory, categoria,
+                            filterBySocio, socio, filterByName, nombre,
+                            filterByNoVendido, estadoFinal);
                     List<Joya> combinado = new ArrayList<>(pendientesBD);
                     combinado.addAll(pendientesInsert);
                     return combinado;
                 }
                 if (filterByAutorizacionTodos) {
                     List<Joya> pendientesInsert = construirJoyasPendientesInsert(
-                            filterById,
-                            id,
-                            filterByCategory,
-                            categoria,
-                            filterBySocio,
-                            socio,
-                            filterByName,
-                            nombre,
-                            filterByNoVendido,
-                            estadoFinal
-                    );
+                            filterById, id, filterByCategory, categoria,
+                            filterBySocio, socio, filterByName, nombre,
+                            filterByNoVendido, estadoFinal);
                     if (!pendientesInsert.isEmpty()) {
                         List<Joya> combinado = new ArrayList<>(resultado);
                         combinado.addAll(pendientesInsert);
@@ -285,9 +358,7 @@ public class VerDatos {
 
             @Override
             protected void done() {
-                if (isCancelled()) {
-                    return;
-                }
+                if (isCancelled()) return;
                 try {
                     actualizarLista(get());
                 } catch (CancellationException ignored) {
@@ -316,8 +387,8 @@ public class VerDatos {
         if (!joya.isAutorizado() && joya.getId() != null && joya.getId() < 0) {
             JOptionPane.showMessageDialog(
                     mainPanel,
-                    "Esta joya aun no existe en inventario oficial; esta en solicitud pendiente de aprobacion.",
-                    "Pendiente de aprobacion",
+                    "Esta joya aún no existe en inventario oficial; está en solicitud pendiente de aprobación.",
+                    "Pendiente de aprobación",
                     JOptionPane.INFORMATION_MESSAGE
             );
             return;
@@ -334,28 +405,20 @@ public class VerDatos {
         return mainPanel;
     }
 
-    private List<Joya> construirJoyasPendientesInsert(boolean filterById,
-                                                      String id,
-                                                      boolean filterByCategory,
-                                                      String categoria,
-                                                      boolean filterBySocio,
-                                                      String socio,
-                                                      boolean filterByName,
-                                                      String nombre,
-                                                      boolean filterByNoVendido,
-                                                      List<String> estadoFinal) {
+    // ── Helpers (sin cambios) ─────────────────────────────────────────────────
+
+    private List<Joya> construirJoyasPendientesInsert(boolean filterById, String id,
+                                                       boolean filterByCategory, String categoria,
+                                                       boolean filterBySocio, String socio,
+                                                       boolean filterByName, String nombre,
+                                                       boolean filterByNoVendido, List<String> estadoFinal) {
         List<CambioPendiente> pendientes = controladora.obtenerPendientesJoya();
         List<Joya> salida = new ArrayList<>();
-
         for (CambioPendiente pendiente : pendientes) {
-            if (!"INSERT".equalsIgnoreCase(pendiente.getOperacion())) {
-                continue;
-            }
-
+            if (!"INSERT".equalsIgnoreCase(pendiente.getOperacion())) continue;
             Joya joya = mapearPendienteInsertAJoya(pendiente);
-            if (!cumpleFiltrosPendiente(joya, filterById, id, filterByCategory, categoria, filterBySocio, socio, filterByName, nombre, filterByNoVendido, estadoFinal)) {
-                continue;
-            }
+            if (!cumpleFiltrosPendiente(joya, filterById, id, filterByCategory, categoria,
+                    filterBySocio, socio, filterByName, nombre, filterByNoVendido, estadoFinal)) continue;
             salida.add(joya);
         }
         return salida;
@@ -380,45 +443,27 @@ public class VerDatos {
         return joya;
     }
 
-    private boolean cumpleFiltrosPendiente(Joya joya,
-                                           boolean filterById,
-                                           String id,
-                                           boolean filterByCategory,
-                                           String categoria,
-                                           boolean filterBySocio,
-                                           String socio,
-                                           boolean filterByName,
-                                           String nombre,
-                                           boolean filterByNoVendido,
-                                           List<String> estadoFinal) {
+    private boolean cumpleFiltrosPendiente(Joya joya, boolean filterById, String id,
+                                            boolean filterByCategory, String categoria,
+                                            boolean filterBySocio, String socio,
+                                            boolean filterByName, String nombre,
+                                            boolean filterByNoVendido, List<String> estadoFinal) {
         if (filterById) {
             String buscado = id == null ? "" : id.trim();
             String display = joya.getDisplayId() == null ? "" : joya.getDisplayId();
             String idNumerico = joya.getId() == null ? "" : String.valueOf(Math.abs(joya.getId()));
-            if (!display.equalsIgnoreCase(buscado) && !idNumerico.equals(buscado)) {
-                return false;
-            }
+            if (!display.equalsIgnoreCase(buscado) && !idNumerico.equals(buscado)) return false;
         }
-        if (filterByCategory && categoria != null && !categoria.equalsIgnoreCase(joya.getCategoria())) {
-            return false;
-        }
-        if (filterBySocio && socio != null && !socio.equalsIgnoreCase(joya.getSocio())) {
-            return false;
-        }
+        if (filterByCategory && categoria != null && !categoria.equalsIgnoreCase(joya.getCategoria())) return false;
+        if (filterBySocio && socio != null && !socio.equalsIgnoreCase(joya.getSocio())) return false;
         if (filterByName && nombre != null) {
             String n = joya.getNombre() == null ? "" : joya.getNombre().toLowerCase();
-            if (!n.contains(nombre.toLowerCase())) {
-                return false;
-            }
+            if (!n.contains(nombre.toLowerCase())) return false;
         }
-        if (filterByNoVendido && joya.isVendido()) {
-            return false;
-        }
+        if (filterByNoVendido && joya.isVendido()) return false;
         if (estadoFinal != null && !estadoFinal.isEmpty()) {
             String est = joya.getEstado() == null ? "" : joya.getEstado();
-            if (!estadoFinal.contains(est)) {
-                return false;
-            }
+            if (!estadoFinal.contains(est)) return false;
         }
         return true;
     }
@@ -426,9 +471,7 @@ public class VerDatos {
     private String extraerTexto(String json, String key) {
         Pattern p = Pattern.compile("\\\"" + Pattern.quote(key) + "\\\"\\s*:\\s*\\\"((?:\\\\.|[^\\\"])*)\\\"");
         Matcher m = p.matcher(json == null ? "" : json);
-        if (!m.find()) {
-            return "";
-        }
+        if (!m.find()) return "";
         return m.group(1)
                 .replace("\\\\\"", "\"")
                 .replace("\\\\n", "\n")
@@ -445,24 +488,17 @@ public class VerDatos {
     private double extraerNumero(String json, String key, double defaultValue) {
         Pattern p = Pattern.compile("\\\"" + Pattern.quote(key) + "\\\"\\s*:\\s*(-?\\d+(?:\\.\\d+)?)");
         Matcher m = p.matcher(json == null ? "" : json);
-        if (!m.find()) {
-            return defaultValue;
-        }
-        try {
-            return Double.parseDouble(m.group(1));
-        } catch (NumberFormatException ex) {
-            return defaultValue;
-        }
+        if (!m.find()) return defaultValue;
+        try { return Double.parseDouble(m.group(1)); }
+        catch (NumberFormatException ex) { return defaultValue; }
     }
 
     private String mapearEstadoOperativo(String seleccion) {
-        if (seleccion == null) {
-            return null;
-        }
+        if (seleccion == null) return null;
         return switch (seleccion) {
             case "Estado: Disponible", "disponible" -> "disponible";
-            case "Estado: Anulado", "anulado" -> "anulado";
-            case "Estado: Prestado", "prestado" -> "prestado";
+            case "Estado: Anulado",    "anulado"    -> "anulado";
+            case "Estado: Prestado",   "prestado"   -> "prestado";
             default -> null;
         };
     }

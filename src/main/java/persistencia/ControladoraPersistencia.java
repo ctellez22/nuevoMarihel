@@ -8,6 +8,7 @@ import logica.Joya;
 import logica.Socio;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
+import org.example.SessionContext;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -19,14 +20,24 @@ public class ControladoraPersistencia {
     private CategoriaJpaController categoriaController;
     private SocioJpaController socioController;
     private CambioPendienteRepository cambioPendienteRepository;
+    private final String joyaTableName;
+    private final SessionContext.Tienda tienda;
 
-    // Constructor
+    // Constructor sin tienda (Marihel por defecto)
     public ControladoraPersistencia() {
-        this.joyaController = new JoyaJpaController();
-        this.catVerifController = new CategoriaVerificacionJpaController();
-        this.categoriaController = new CategoriaJpaController();
-        this.socioController = new SocioJpaController();
+        this(null);
+    }
+
+    // Constructor con tienda seleccionada
+    public ControladoraPersistencia(SessionContext.Tienda tienda) {
+        boolean esQueens = tienda == SessionContext.Tienda.QUEENS;
+        this.tienda              = tienda;
+        this.joyaController      = esQueens ? new QueensJoyaJpaController() : new JoyaJpaController();
+        this.catVerifController  = new CategoriaVerificacionJpaController();
+        this.categoriaController = new CategoriaJpaController(); // categorías compartidas entre ambas joyerías
+        this.socioController     = new SocioJpaController();
         this.cambioPendienteRepository = new CambioPendienteRepository();
+        this.joyaTableName       = esQueens ? "queens_Joya" : "joya";
     }
 
     // Métodos para interactuar con JoyaJpaController
@@ -313,7 +324,7 @@ public class ControladoraPersistencia {
         EntityManager em = PersistenceManager.createEntityManager();
         try {
             em.getTransaction().begin();
-            Query q = em.createNativeQuery("UPDATE joya SET autorizado = FALSE WHERE id = ?1");
+            Query q = em.createNativeQuery("UPDATE " + joyaTableName + " SET autorizado = FALSE WHERE id = ?1");
             q.setParameter(1, id);
             q.executeUpdate();
             em.getTransaction().commit();
@@ -337,17 +348,21 @@ public class ControladoraPersistencia {
         categoriaController.delete(id);
     }
 
-    // Crear socio evitando duplicados por nombre
+    // Crear socio evitando duplicados por nombre, etiquetado con la tienda actual
     public void agregarSocio(String nombre) {
         Socio existente = socioController.findByNombre(nombre);
         if (existente != null) {
             throw new IllegalArgumentException("El socio '" + nombre + "' ya existe.");
         }
-        socioController.create(new Socio(nombre));
+        String tiendaTag = (tienda != null) ? tienda.name() : null;
+        socioController.create(new Socio(nombre, tiendaTag));
     }
 
-    // Listar socios
+    // Listar socios filtrados por tienda (NULL = compartido, visible en ambas)
     public List<Socio> obtenerSocios() {
+        if (tienda != null) {
+            return socioController.findByTienda(tienda.name());
+        }
         return socioController.findAll();
     }
 

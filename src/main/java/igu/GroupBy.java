@@ -6,7 +6,6 @@ import logica.CategoriaVerificacion;
 import logica.Controladora;
 import logica.Joya;
 import org.example.SessionContext;
-import persistencia.ControladoraPersistencia;
 
 import javax.swing.*;
 import java.awt.*;
@@ -20,25 +19,19 @@ public class GroupBy {
     private JCheckBox todasLasJoyasCheckBox;
     private JComboBox<String> comboBoxCategoria;
     private JButton btnContar;
-    private JList<Joya> listaJoyas; // Lista de Joya en lugar de String
+    private JList<Joya> listaJoyas;
     private JPanel mainPanel;
     private JButton btnVerificar;
     private JScrollPane panelScrollVerificados;
-    private JScrollBar scrollBar1;
 
-
-    private Controladora controladora; // Instancia de la capa lógica
-    private ControladoraPersistencia controladoraPersistencia;
-
-    private DefaultListModel<Joya> listModel; // Modelo de datos para la lista
-    private boolean enVerificacion = false; // Para controlar si estamos en modo verificación
-    private JDialog dialogVerificacion; // Referencia al cuadro de diálogo de verificación
+    private Controladora controladora;
+    private DefaultListModel<Joya> listModel;
+    private boolean enVerificacion = false;
+    private JDialog dialogVerificacion;
     private String categoriaSeleccionadaActual;
     private SwingWorker<List<Joya>, Void> cargaJoyasWorker;
     private SwingWorker<List<CategoriaVerificacion>, Void> cargaCategoriasWorker;
     private final SessionContext session;
-
-
 
     public GroupBy(JFrame parent) {
         this(parent, null);
@@ -46,26 +39,136 @@ public class GroupBy {
 
     public GroupBy(JFrame parent, SessionContext session) {
         this.session = session;
-        controladora = new Controladora();
+        controladora = new Controladora(session);
         listModel = new DefaultListModel<>();
-        listaJoyas.setModel(listModel);
-        listaJoyas.setCellRenderer(new JoyaListCellRenderer());
+
+        construirUI();
+        registrarAcciones();
         cargarCategoriasDesdeBD();
         cargarCategoriasVerificacion();
+    }
 
+    // ── Construcción de la UI en código puro ─────────────────────────────────
 
+    private void construirUI() {
+        mainPanel = new JPanel(new BorderLayout(8, 8));
+        mainPanel.setBackground(UITheme.BG);
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
 
+        // Título
+        JLabel title = new JLabel("Group By", SwingConstants.CENTER);
+        title.setFont(UITheme.F_TITLE);
+        title.setForeground(UITheme.TEXT);
+        mainPanel.add(title, BorderLayout.NORTH);
 
-        // Acción para "Todas las Joyas"
+        // Panel izquierdo: categorías verificadas — título como label, no TitledBorder
+        JPanel leftWrapper = new JPanel(new BorderLayout(0, 6));
+        leftWrapper.setBackground(UITheme.BG);
+        leftWrapper.setPreferredSize(new Dimension(380, 400));
+
+        JLabel verifiedHeader = new JLabel("Estado de verificación");
+        verifiedHeader.setFont(UITheme.F_SECTION);
+        verifiedHeader.setForeground(UITheme.TEXT);
+        verifiedHeader.setBorder(BorderFactory.createEmptyBorder(0, 4, 4, 0));
+        leftWrapper.add(verifiedHeader, BorderLayout.NORTH);
+
+        panelScrollVerificados = UITheme.styledScroll(new JPanel());
+        leftWrapper.add(panelScrollVerificados, BorderLayout.CENTER);
+
+        mainPanel.add(leftWrapper, BorderLayout.WEST);
+
+        // Panel central: lista de joyas con encabezado
+        JPanel centerWrapper = new JPanel(new BorderLayout(0, 6));
+        centerWrapper.setBackground(UITheme.BG);
+
+        JLabel joyasHeader = new JLabel("Joyas");
+        joyasHeader.setFont(UITheme.F_SECTION);
+        joyasHeader.setForeground(UITheme.TEXT);
+        joyasHeader.setBorder(BorderFactory.createEmptyBorder(0, 4, 4, 0));
+        centerWrapper.add(joyasHeader, BorderLayout.NORTH);
+
+        listaJoyas = new JList<>(listModel);
+        listaJoyas.setCellRenderer(new JoyaListCellRenderer());
+        listaJoyas.setFont(UITheme.F_BODY);
+        listaJoyas.setBackground(UITheme.BG);
+        listaJoyas.setSelectionBackground(UITheme.ACCENT);
+        listaJoyas.setSelectionForeground(Color.WHITE);
+        listaJoyas.setFixedCellHeight(32);
+
+        centerWrapper.add(UITheme.styledScroll(listaJoyas), BorderLayout.CENTER);
+        mainPanel.add(centerWrapper, BorderLayout.CENTER);
+
+        // Panel derecho: controles
+        JPanel rightPanel = new JPanel();
+        rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.Y_AXIS));
+        rightPanel.setBackground(UITheme.BG);
+        rightPanel.setBorder(BorderFactory.createCompoundBorder(
+                UITheme.roundedBorder(UITheme.BORDER, 14),
+                BorderFactory.createEmptyBorder(12, 12, 12, 12)
+        ));
+        rightPanel.setPreferredSize(new Dimension(180, 400));
+
+        // Imagen decorativa
+        try {
+            ImageIcon icon = new ImageIcon(getClass().getResource("/estin.png"));
+            Image scaled = icon.getImage().getScaledInstance(100, 100, Image.SCALE_SMOOTH);
+            JLabel imgLabel = new JLabel(new ImageIcon(scaled));
+            imgLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+            rightPanel.add(imgLabel);
+        } catch (Exception ignored) {}
+
+        rightPanel.add(Box.createVerticalStrut(12));
+
+        todasLasJoyasCheckBox = new JCheckBox("Todas las joyas");
+        todasLasJoyasCheckBox.setFont(UITheme.F_FILTER);
+        todasLasJoyasCheckBox.setForeground(UITheme.TEXT);
+        todasLasJoyasCheckBox.setBackground(UITheme.BG);
+        todasLasJoyasCheckBox.setAlignmentX(Component.CENTER_ALIGNMENT);
+        rightPanel.add(todasLasJoyasCheckBox);
+
+        rightPanel.add(Box.createVerticalStrut(6));
+
+        comboBoxCategoria = new JComboBox<>();
+        UITheme.styleCombo(comboBoxCategoria);
+        comboBoxCategoria.setAlignmentX(Component.CENTER_ALIGNMENT);
+        comboBoxCategoria.setMaximumSize(new Dimension(160, 30));
+        rightPanel.add(comboBoxCategoria);
+
+        rightPanel.add(Box.createVerticalStrut(8));
+
+        btnContar = UITheme.primaryBtn("Contar");
+        btnContar.setAlignmentX(Component.CENTER_ALIGNMENT);
+        btnContar.setMaximumSize(new Dimension(140, 34));
+        rightPanel.add(btnContar);
+
+        rightPanel.add(Box.createVerticalStrut(4));
+
+        JLabel moneyLabel = new JLabel("$$$", SwingConstants.CENTER);
+        moneyLabel.setFont(UITheme.F_SECTION);
+        moneyLabel.setForeground(UITheme.TEXT_MUTED);
+        moneyLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        rightPanel.add(moneyLabel);
+
+        rightPanel.add(Box.createVerticalStrut(8));
+
+        btnVerificar = UITheme.primaryBtn("Verificar");
+        btnVerificar.setAlignmentX(Component.CENTER_ALIGNMENT);
+        btnVerificar.setMaximumSize(new Dimension(140, 34));
+        rightPanel.add(btnVerificar);
+
+        rightPanel.add(Box.createVerticalGlue());
+
+        mainPanel.add(rightPanel, BorderLayout.EAST);
+    }
+
+    private void registrarAcciones() {
         todasLasJoyasCheckBox.addActionListener(e -> {
             if (!enVerificacion && todasLasJoyasCheckBox.isSelected()) {
                 cargarTodasLasJoyas();
-                //checkBoxCategoria.setSelected(false);
                 comboBoxCategoria.setEnabled(false);
             }
         });
 
-        // Acción para "Categoría"
         comboBoxCategoria.addActionListener(e -> {
             if (!enVerificacion) {
                 String categoriaSeleccionada = (String) comboBoxCategoria.getSelectedItem();
@@ -77,29 +180,15 @@ public class GroupBy {
             }
         });
 
-        // Acción para el botón "Contar"
-        /*
         btnContar.addActionListener(e -> {
             int cantidad = listModel.getSize();
-            JOptionPane.showMessageDialog(mainPanel, "Total de joyas: " + cantidad, "Conteo", JOptionPane.INFORMATION_MESSAGE, new ImageIcon(new ImageIcon(getClass().getResource("/inversor.png")).getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH)));
-        });
-        */
-
-
-
-        btnContar.addActionListener(e -> {
-            int cantidad = listModel.getSize();
-
-            // Prepara el ícono que quieras mostrar
-            ImageIcon icon = new ImageIcon(
-                    new ImageIcon(getClass().getResource("/inversor.png"))
-                            .getImage()
-                            .getScaledInstance(50, 50, Image.SCALE_SMOOTH)
-            );
-
-            // Definir las opciones a mostrar
-            Object[] opciones = { "OK", "Marcar todo verificado" };
-
+            ImageIcon icon;
+            try {
+                icon = new ImageIcon(new ImageIcon(getClass().getResource("/inversor.png")).getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH));
+            } catch (Exception ex) {
+                icon = null;
+            }
+            Object[] opciones = {"OK", "Marcar todo verificado"};
             int seleccion = JOptionPane.showOptionDialog(
                     mainPanel,
                     "Total de joyas: " + cantidad,
@@ -108,54 +197,42 @@ public class GroupBy {
                     JOptionPane.INFORMATION_MESSAGE,
                     icon,
                     opciones,
-                    opciones[0]  // Opción por defecto
+                    opciones[0]
             );
-
-            // Revisar la opción que seleccionó el usuario
             if (seleccion == 1) {
-                // "Marcar todo verificado"
-                //verificarTodo();
-                controladora.actualizarFechaVerificacionCategoria(categoriaSeleccionadaActual,LocalDateTime.now() );
+                controladora.actualizarFechaVerificacionCategoria(categoriaSeleccionadaActual, LocalDateTime.now());
             }
-            // Si seleccion == 0 ó -1, no hacemos nada (simplemente “OK” o cerrar diálogo)
         });
 
-
-
-
-
-
-
-        // Acción para el botón "Verificar"
         btnVerificar.addActionListener(e -> {
             if (!enVerificacion) {
                 bloquearOpciones();
                 iniciarVerificacion();
-            }else{
+            } else {
                 dialogVerificacion.setVisible(true);
             }
         });
+
         listaJoyas.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseClicked(java.awt.event.MouseEvent e) {
                 if (e.getClickCount() == 1) {
                     int index = listaJoyas.locationToIndex(e.getPoint());
                     if (index != -1) {
-                        Joya joyaSeleccionada = listModel.getElementAt(index);
-                        mostrarDetallesJoya2(joyaSeleccionada);
+                        mostrarDetallesJoya2(listModel.getElementAt(index));
                     }
                 }
             }
         });
-
     }
+
+    // ── Lógica (sin cambios respecto al original) ─────────────────────────────
 
     private void cargarCategoriasDesdeBD() {
         comboBoxCategoria.removeAllItems();
         comboBoxCategoria.addItem("Seleccione categoria...");
         try {
-            List<Categoria> categorias = controladora.obtenerCategorias();
-            for (Categoria categoria : categorias) {
+            for (Categoria categoria : controladora.obtenerCategorias()) {
                 comboBoxCategoria.addItem(categoria.getNombre());
             }
             comboBoxCategoria.setSelectedIndex(0);
@@ -165,52 +242,32 @@ public class GroupBy {
     }
 
     private void cargarTodasLasJoyas() {
-        List<String> estado = Arrays.asList("disponible", "prestado");
-        cargarJoyasAsync(false, null, estado);
+        cargarJoyasAsync(false, null, Arrays.asList("disponible", "prestado"));
     }
 
     private void cargarJoyasPorCategoria(String categoriaSeleccionada) {
-        // Imprime la categoría que se está cargando
-        //System.out.println("Cargando joyas para la categoría: '" + categoriaSeleccionada + "'");
-
-        // Asigna la categoría actual para poder utilizarla luego al finalizar la verificación
         categoriaSeleccionadaActual = categoriaSeleccionada;
-
-        // Filtrar joyas por categoría y que no estén vendidas
-        List<String> estado = Arrays.asList("disponible", "prestado");
-        cargarJoyasAsync(true, categoriaSeleccionada, estado);
+        cargarJoyasAsync(true, categoriaSeleccionada, Arrays.asList("disponible", "prestado"));
     }
 
     private void cargarJoyasAsync(boolean filterByCategory, String categoriaSeleccionada, List<String> estado) {
         if (cargaJoyasWorker != null && !cargaJoyasWorker.isDone()) {
             cargaJoyasWorker.cancel(true);
         }
-
         setCargandoJoyas(true);
         List<String> estadoFiltro = List.copyOf(estado);
         cargaJoyasWorker = new SwingWorker<>() {
             @Override
             protected List<Joya> doInBackground() {
                 return controladora.filtrarJoyas(
-                        false,
-                        null,
-                        filterByCategory,
-                        categoriaSeleccionada,
-                        false,
-                        null,
-                        false,
-                        null,
-                        true,
-                        estadoFiltro
+                        false, null, filterByCategory, categoriaSeleccionada,
+                        false, null, false, null, true, estadoFiltro
                 );
             }
-
             @Override
             protected void done() {
                 setCargandoJoyas(false);
-                if (isCancelled()) {
-                    return;
-                }
+                if (isCancelled()) return;
                 try {
                     actualizarLista(get());
                 } catch (CancellationException ignored) {
@@ -229,96 +286,77 @@ public class GroupBy {
         comboBoxCategoria.setEnabled(!cargando && !todasLasJoyasCheckBox.isSelected() && !enVerificacion);
     }
 
-
     private void actualizarLista(List<Joya> joyas) {
         listModel.clear();
         for (Joya joya : joyas) {
             listModel.addElement(joya);
         }
     }
+
     private void mostrarDetallesJoya2(Joya joya) {
         JDialog detallesDialog = new JDialog((JFrame) SwingUtilities.getWindowAncestor(mainPanel), "Detalles de la Joya", true);
         detallesDialog.setSize(650, 900);
         detallesDialog.setLocationRelativeTo(mainPanel);
-        DetallesJoya detallesJoya = new DetallesJoya(joya, null, session);
-        detallesDialog.add(detallesJoya.getMainPanel());
+        detallesDialog.add(new DetallesJoya(joya, null, session).getMainPanel());
         detallesDialog.setVisible(true);
     }
 
-
     private void iniciarVerificacion() {
         enVerificacion = true;
-
         if (dialogVerificacion == null) {
-            // Crear el cuadro de diálogo si no existe
             dialogVerificacion = new JDialog((JFrame) SwingUtilities.getWindowAncestor(mainPanel), "Verificación de Joyas", true);
             dialogVerificacion.setSize(600, 400);
             dialogVerificacion.setLocationRelativeTo(mainPanel);
 
-            // Panel principal del diálogo
             JPanel dialogPanel = new JPanel(new BorderLayout());
-
-            // Panel de entrada de ID
             JPanel inputPanel = new JPanel(new BorderLayout());
             JLabel lblInfo = new JLabel("Ingrese el ID de la joya y presione Enter:");
             JTextField txtInputId = new JTextField();
             inputPanel.add(lblInfo, BorderLayout.NORTH);
             inputPanel.add(txtInputId, BorderLayout.CENTER);
 
-            // Panel para mostrar los detalles de la joya
             JPanel detallesPanel = new JPanel();
             detallesPanel.setLayout(new BoxLayout(detallesPanel, BoxLayout.Y_AXIS));
             detallesPanel.setBorder(BorderFactory.createTitledBorder("Detalles de la Joya"));
 
-            // Agregar los paneles al diálogo
             dialogPanel.add(inputPanel, BorderLayout.NORTH);
             dialogPanel.add(new JScrollPane(detallesPanel), BorderLayout.CENTER);
-
             dialogVerificacion.add(dialogPanel);
 
-            // Listener para verificar el ID al presionar Enter
             txtInputId.addActionListener(e -> {
                 String inputId = txtInputId.getText().trim();
                 if (!inputId.isEmpty()) {
                     verificarYMostrarJoya(inputId, detallesPanel);
-                    txtInputId.setText(""); // Limpiar el campo para el siguiente ID
+                    txtInputId.setText("");
                 }
             });
-            // Listener para cerrar el cuadro de diálogo al presionar Escape
+
             dialogVerificacion.getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
                     .put(KeyStroke.getKeyStroke("ESCAPE"), "closeDialog");
             dialogVerificacion.getRootPane().getActionMap().put("closeDialog", new AbstractAction() {
                 @Override
                 public void actionPerformed(java.awt.event.ActionEvent e) {
-                    cerrarVerificacion(); // Cierra el cuadro sin destruirlo
+                    cerrarVerificacion();
                 }
             });
         }
-
-        dialogVerificacion.setVisible(true); // Reutilizar el cuadro si ya existe
+        dialogVerificacion.setVisible(true);
     }
-
-
-
 
     private void cerrarVerificacion() {
         if (dialogVerificacion != null) {
-            dialogVerificacion.setVisible(false); // Ocultar el cuadro sin destruirlo
+            dialogVerificacion.setVisible(false);
             enVerificacion = false;
-            desbloquearOpciones(); // Desbloquear las opciones si es necesario
+            desbloquearOpciones();
         }
     }
 
-
-
-
     private JPanel crearTarjetaAtributo(String titulo, String valor) {
-        JPanel tarjeta = new JPanel();
-        tarjeta.setLayout(new BorderLayout());
-        tarjeta.setBackground(new Color(255, 255, 255)); // Fondo blanco
+        JPanel tarjeta = new JPanel(new BorderLayout());
+        tarjeta.setBackground(Color.WHITE);
         tarjeta.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(200, 200, 200), 1, true), // Borde redondeado
-                BorderFactory.createEmptyBorder(10, 15, 10, 15) // Espaciado interno
+                BorderFactory.createLineBorder(new Color(200, 200, 200), 1, true),
+                BorderFactory.createEmptyBorder(10, 15, 10, 15)
         ));
         tarjeta.setMaximumSize(new Dimension(450, 50));
 
@@ -332,97 +370,77 @@ public class GroupBy {
 
         tarjeta.add(lblTitulo, BorderLayout.WEST);
         tarjeta.add(lblValor, BorderLayout.CENTER);
-
         return tarjeta;
     }
 
     private void verificarYMostrarJoya(String id, JPanel detallesPanel) {
         boolean encontrada = false;
-
-        // Iterar sobre el modelo de la lista
         for (int i = 0; i < listModel.getSize(); i++) {
             Joya joya = listModel.getElementAt(i);
-
-            // Verificar si el ID coincide
-            String buscado = (id == null) ? "" : id.trim();
-            boolean coincide = false;
-            // Primero comparar displayId (si existe), insensible a mayúsculas
-            if (joya.getDisplayId() != null && !joya.getDisplayId().isBlank()) {
-                if (joya.getDisplayId().equalsIgnoreCase(buscado)) {
-                    coincide = true;
-                }
-            }
-            // Si no coincidió por displayId, comparar por id numérico
-            if (!coincide) {
-                if (joya.getId() != null && joya.getId().toString().equals(buscado)) {
-                    coincide = true;
-                }
-            }
+            String buscado = id.trim();
+            boolean coincide = (joya.getDisplayId() != null && joya.getDisplayId().equalsIgnoreCase(buscado))
+                    || (joya.getId() != null && joya.getId().toString().equals(buscado));
 
             if (coincide) {
                 encontrada = true;
-
-                // Actualizar los detalles de la joya en el panel
                 detallesPanel.removeAll();
-                // Mostrar displayId preferentemente si existe
-                String idAMostrar = (joya.getDisplayId() != null && !joya.getDisplayId().isBlank()) ? joya.getDisplayId() : String.valueOf(joya.getId());
-                 detallesPanel.add(crearTarjetaAtributo("ID", idAMostrar));
-                 detallesPanel.add(crearTarjetaAtributo("Nombre", joya.getNombre()));
-                 detallesPanel.add(crearTarjetaAtributo("Categoría", joya.getCategoria()));
-                 detallesPanel.add(crearTarjetaAtributo("Peso", FormatterUtils.formatearPeso(joya.getPeso()) + " gramos"));
-                 detallesPanel.add(crearTarjetaAtributo("Precio", "$" + joya.getPrecio()));
-                detallesPanel.add(crearTarjetaAtributo("Tiene Piedra", joya.isTienePiedra() ? "Sí 💎" : "No 🪨"));
+                String idAMostrar = (joya.getDisplayId() != null && !joya.getDisplayId().isBlank())
+                        ? joya.getDisplayId() : String.valueOf(joya.getId());
+                detallesPanel.add(crearTarjetaAtributo("ID", idAMostrar));
+                detallesPanel.add(crearTarjetaAtributo("Nombre", joya.getNombre()));
+                detallesPanel.add(crearTarjetaAtributo("Categoría", joya.getCategoria()));
+                detallesPanel.add(crearTarjetaAtributo("Peso", FormatterUtils.formatearPeso(joya.getPeso()) + " gramos"));
+                detallesPanel.add(crearTarjetaAtributo("Precio", "$" + joya.getPrecio()));
+                detallesPanel.add(crearTarjetaAtributo("Tiene Piedra", joya.isTienePiedra() ? "Sí" : "No"));
                 if (joya.isTienePiedra()) {
                     detallesPanel.add(crearTarjetaAtributo("Información de Piedra", joya.getInfoPiedra()));
                 }
                 detallesPanel.add(crearTarjetaAtributo("Observación", joya.getObservacion()));
                 detallesPanel.revalidate();
                 detallesPanel.repaint();
-
-                // Eliminar la joya de la lista
                 listModel.remove(i);
-                break; // Salir del bucle después de encontrar y procesar
+                break;
             }
         }
 
         if (!encontrada) {
-            JOptionPane.showMessageDialog(mainPanel, "La joya con ID " + id + " no se encuentra en la lista.", "No Encontrada", JOptionPane.ERROR_MESSAGE, new ImageIcon(new ImageIcon(getClass().getResource("/llora.png")).getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH)));
+            try {
+                ImageIcon icon = new ImageIcon(new ImageIcon(getClass().getResource("/llora.png")).getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH));
+                JOptionPane.showMessageDialog(mainPanel, "La joya con ID " + id + " no se encuentra en la lista.", "No Encontrada", JOptionPane.ERROR_MESSAGE, icon);
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(mainPanel, "La joya con ID " + id + " no se encuentra en la lista.", "No Encontrada", JOptionPane.ERROR_MESSAGE);
+            }
         }
 
-        // Comprobar si la lista está vacía
         if (listModel.getSize() == 0) {
-            JOptionPane.showMessageDialog(mainPanel, "Todas las joyas han sido verificadas y la lista está vacía.", "Lista Completa", JOptionPane.INFORMATION_MESSAGE, new ImageIcon(new ImageIcon(getClass().getResource("/nino.png")).getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH)));
-            // Actualiza la fecha de verificación para la categoría
+            try {
+                ImageIcon icon = new ImageIcon(new ImageIcon(getClass().getResource("/nino.png")).getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH));
+                JOptionPane.showMessageDialog(mainPanel, "Todas las joyas han sido verificadas.", "Lista Completa", JOptionPane.INFORMATION_MESSAGE, icon);
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(mainPanel, "Todas las joyas han sido verificadas.", "Lista Completa", JOptionPane.INFORMATION_MESSAGE);
+            }
             if (categoriaSeleccionadaActual != null) {
-                System.out.println("Actualizando categoría: '" + categoriaSeleccionadaActual + "' con fecha " + LocalDateTime.now());
                 controladora.actualizarFechaVerificacionCategoria(categoriaSeleccionadaActual, LocalDateTime.now());
-            } else {
-                System.out.println("categoriaSeleccionadaActual es null");
             }
         }
     }
 
-
     private void bloquearOpciones() {
         todasLasJoyasCheckBox.setEnabled(false);
-        //checkBoxCategoria.setEnabled(false);
         comboBoxCategoria.setEnabled(false);
     }
 
     private void desbloquearOpciones() {
         todasLasJoyasCheckBox.setEnabled(true);
-        //checkBoxCategoria.setEnabled(true);
         comboBoxCategoria.setEnabled(true);
     }
-
-
 
     private void cargarCategoriasVerificacion() {
         if (cargaCategoriasWorker != null && !cargaCategoriasWorker.isDone()) {
             cargaCategoriasWorker.cancel(true);
         }
-
         JPanel cargandoPanel = new JPanel(new BorderLayout());
+        cargandoPanel.setBackground(UITheme.BG);
         cargandoPanel.add(new JLabel("Cargando categorías...", SwingConstants.CENTER), BorderLayout.CENTER);
         panelScrollVerificados.setViewportView(cargandoPanel);
 
@@ -431,17 +449,14 @@ public class GroupBy {
             protected List<CategoriaVerificacion> doInBackground() {
                 return controladora.obtenerCategoriasOrdenadasPorVerificacion();
             }
-
             @Override
             protected void done() {
-                if (isCancelled()) {
-                    return;
-                }
+                if (isCancelled()) return;
                 try {
                     List<CategoriaVerificacion> categorias = get();
                     JPanel panelCategorias = new JPanel();
                     panelCategorias.setLayout(new BoxLayout(panelCategorias, BoxLayout.Y_AXIS));
-
+                    panelCategorias.setBackground(UITheme.BG);
                     for (CategoriaVerificacion cat : categorias) {
                         long dias = ChronoUnit.DAYS.between(cat.getUltimaFechaVerificacion(), LocalDateTime.now());
                         String icono = (dias > 20) ? "\u2717 " : "\u2713 ";
@@ -449,15 +464,11 @@ public class GroupBy {
                         JLabel lblCategoria = new JLabel(texto);
                         lblCategoria.setFont(new Font("SansSerif", Font.BOLD, 14));
                         lblCategoria.setForeground(Color.BLACK);
-
-                        Color bgColor = (dias > 20) ? new Color(255, 204, 204) : new Color(204, 255, 204);
                         lblCategoria.setOpaque(true);
-                        lblCategoria.setBackground(bgColor);
-
+                        lblCategoria.setBackground((dias > 20) ? new Color(255, 204, 204) : new Color(204, 255, 204));
                         panelCategorias.add(lblCategoria);
                         panelCategorias.add(Box.createRigidArea(new Dimension(0, 5)));
                     }
-
                     panelScrollVerificados.setViewportView(panelCategorias);
                 } catch (CancellationException ignored) {
                 } catch (Exception ex) {
@@ -467,8 +478,6 @@ public class GroupBy {
         };
         cargaCategoriasWorker.execute();
     }
-
-
 
     public JPanel getMainPanel() {
         return mainPanel;

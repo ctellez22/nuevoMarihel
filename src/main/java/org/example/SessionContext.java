@@ -1,6 +1,6 @@
 package org.example;
 
-public record SessionContext(Long userId, String username, Role role) {
+public record SessionContext(Long userId, String username, Role role, Tienda tienda) {
 
     public enum Role {
         ADMIN,
@@ -14,8 +14,28 @@ public record SessionContext(Long userId, String username, Role role) {
         }
     }
 
+    public enum Tienda {
+        MARIHEL("Marihel"),
+        QUEENS("Queens");
+
+        private final String displayName;
+
+
+        Tienda(String displayName) {
+            this.displayName = displayName;
+        }
+
+        public String displayName() {
+            return displayName;
+        }
+    }
+
     public boolean isAdmin() {
         return role == Role.ADMIN;
+    }
+
+    public boolean isQueens() {
+        return tienda == Tienda.QUEENS;
     }
 }
 

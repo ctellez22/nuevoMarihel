@@ -2,6 +2,7 @@ package igu;
 
 import logica.Controladora;
 import logica.Socio;
+import org.example.SessionContext;
 
 import javax.swing.*;
 import java.awt.*;
@@ -15,35 +16,57 @@ public class Socios {
     private final Controladora controladora;
 
     public Socios(JFrame parent) {
-        this.controladora = new Controladora();
+        this(parent, null);
+    }
+
+    public Socios(JFrame parent, SessionContext session) {
+        this.controladora = new Controladora(session);
 
         this.mainPanel = new JPanel(new BorderLayout(12, 12));
-        this.mainPanel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        this.mainPanel.setBackground(UITheme.BG);
+        this.mainPanel.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
 
+        // ── Panel superior ───────────────────────────────────────────────────────
         JPanel panelSuperior = new JPanel(new BorderLayout(8, 8));
+        panelSuperior.setBackground(UITheme.BG);
+
         JLabel lblNombre = new JLabel("Nuevo socio:");
+        lblNombre.setFont(UITheme.F_LABEL);
+        lblNombre.setForeground(UITheme.TEXT);
+
         this.txtNombre = new JTextField();
-        JButton btnGuardar = new JButton("Guardar");
-        JButton btnEliminar = new JButton("Eliminar");
-        JButton btnRefrescar = new JButton("Refrescar");
+        UITheme.styleField(this.txtNombre);
+
+        JButton btnGuardar   = UITheme.primaryBtn("Guardar");
+        JButton btnEliminar  = UITheme.dangerBtn("Eliminar");
+        JButton btnRefrescar = UITheme.secondaryBtn("Refrescar");
 
         JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        panelBotones.setBackground(UITheme.BG);
         panelBotones.add(btnRefrescar);
         panelBotones.add(btnEliminar);
         panelBotones.add(btnGuardar);
 
-        panelSuperior.add(lblNombre, BorderLayout.WEST);
-        panelSuperior.add(txtNombre, BorderLayout.CENTER);
+        panelSuperior.add(lblNombre,    BorderLayout.WEST);
+        panelSuperior.add(txtNombre,    BorderLayout.CENTER);
         panelSuperior.add(panelBotones, BorderLayout.EAST);
 
+        // ── Lista ────────────────────────────────────────────────────────────────
         this.listModel = new DefaultListModel<>();
         JList<String> listSocios = new JList<>(listModel);
-        JScrollPane scrollPane = new JScrollPane(listSocios);
-        scrollPane.setBorder(BorderFactory.createTitledBorder("Socios registrados"));
+        listSocios.setFont(UITheme.F_BODY);
+        listSocios.setBackground(UITheme.BG);
+        listSocios.setForeground(UITheme.TEXT);
+        listSocios.setSelectionBackground(UITheme.ACCENT);
+        listSocios.setSelectionForeground(Color.WHITE);
+        listSocios.setFixedCellHeight(32);
+
+        JScrollPane scrollPane = UITheme.styledScroll(listSocios);
 
         this.mainPanel.add(panelSuperior, BorderLayout.NORTH);
-        this.mainPanel.add(scrollPane, BorderLayout.CENTER);
+        this.mainPanel.add(scrollPane,    BorderLayout.CENTER);
 
+        // ── Listeners ────────────────────────────────────────────────────────────
         btnGuardar.addActionListener(e -> guardarSocio());
         btnEliminar.addActionListener(e -> eliminarSocioSeleccionado(listSocios));
         btnRefrescar.addActionListener(e -> cargarSocios());
@@ -114,4 +137,3 @@ public class Socios {
         }
     }
 }
-

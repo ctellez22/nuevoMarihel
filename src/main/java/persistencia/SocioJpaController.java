@@ -68,6 +68,20 @@ public class SocioJpaController implements Serializable {
         }
     }
 
+    /** Devuelve socios cuya tienda coincida con la indicada O sea NULL (compartidos). */
+    public List<Socio> findByTienda(String tienda) {
+        EntityManager em = getEntityManager();
+        try {
+            return em.createQuery(
+                            "SELECT s FROM Socio s WHERE s.tienda IS NULL OR UPPER(s.tienda) = UPPER(:tienda) ORDER BY s.nombre ASC",
+                            Socio.class)
+                    .setParameter("tienda", tienda)
+                    .getResultList();
+        } finally {
+            em.close();
+        }
+    }
+
     public void delete(Long id) {
         EntityManager em = getEntityManager();
         try {
