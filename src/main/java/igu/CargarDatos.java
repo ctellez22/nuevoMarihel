@@ -2,37 +2,47 @@ package igu;
 
 import logica.Controladora;
 import logica.Categoria;
+import logica.Impresora;
+import logica.Joya;
 import logica.Socio;
 import org.example.SessionContext;
 
 import javax.swing.*;
+import javax.swing.text.AbstractDocument;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.BadLocationException;
 import javax.swing.text.DefaultFormatterFactory;
+import javax.swing.text.DocumentFilter;
 import javax.swing.text.NumberFormatter;
 import java.awt.*;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
+import java.util.ArrayList;
 import java.util.List;
 
-public class CargarDatos {
-    private String socioPorDefecto;
 
+public class CargarDatos {
     private JTextField txtNombre;
     private JTextArea txtObs;
     private JTextField txtPeso;
     private JComboBox<String> cmbCategoria;
     private JButton btnLimpiar;
     private JButton btnGuardar;
-    private JPanel mainPanel;
+    private JPanel mainPanel; // Contenedor principal de la ventana
     private JCheckBox siCheckBox;
+    private JTextArea textArea1;
     private JTextArea txtInfoPiedra;
     private JPanel fotoPanel;
     private JLabel txtPrecioTotal;
     private JFormattedTextField txtPrecioGramo;
     private JFormattedTextField txtPrecioTotalManual;
     private JComboBox<String> socios;
+    private JLabel socio;
+    private JButton btnAgregarPiedraIndependiente;
 
-    private Controladora logicaController;
+    private Controladora logicaController; // Instancia de la controladora de lógica
     private final SessionContext session;
+    private final List<PiedraCosteo> piedrasIngresadas = new ArrayList<>();
 
     public CargarDatos(JFrame parent) {
         this(parent, null);
@@ -40,222 +50,81 @@ public class CargarDatos {
 
     public CargarDatos(JFrame parent, SessionContext session) {
         this.session = session;
-        this.socioPorDefecto = (session != null && session.isQueens()) ? "joyeria queens" : "joyeria marihel";
-        construirUI();
         inicializarTodo();
     }
 
-    // ── Construcción de la UI en código puro ─────────────────────────────────
-
-    private void construirUI() {
-        mainPanel = new JPanel(new BorderLayout(8, 8));
-        mainPanel.setBackground(UITheme.BG);
-        mainPanel.setBorder(UITheme.paddedRound(UITheme.BORDER, 14, 10, 16));
-
-        // Título
-        JLabel title = new JLabel("Cargar Datos", SwingConstants.CENTER);
-        title.setFont(UITheme.F_TITLE);
-        title.setForeground(UITheme.TEXT);
-        mainPanel.add(title, BorderLayout.NORTH);
-
-        // Imagen decorativa (nube)
-        fotoPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        fotoPanel.setBackground(UITheme.BG);
-        try {
-            ImageIcon icon = new ImageIcon(getClass().getResource("/nube.png"));
-            Image scaled = icon.getImage().getScaledInstance(60, 60, Image.SCALE_SMOOTH);
-            fotoPanel.add(new JLabel(new ImageIcon(scaled)));
-        } catch (Exception ignored) {}
-
-        // Formulario
-        JPanel formPanel = new JPanel(new GridBagLayout());
-        formPanel.setBackground(UITheme.BG);
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 8, 5, 8);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.anchor = GridBagConstraints.WEST;
-
-        // ── Descripción ──────────────────────────────────────────────────────
-        gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 0;
-        formPanel.add(label("Descripción: "), gbc);
-        txtNombre = UITheme.styledField();
-        gbc.gridx = 1; gbc.gridy = 0; gbc.weightx = 1; gbc.gridwidth = 3;
-        formPanel.add(txtNombre, gbc);
-        gbc.gridwidth = 1;
-
-        // ── Peso ─────────────────────────────────────────────────────────────
-        gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = 0;
-        formPanel.add(label("Peso: "), gbc);
-        txtPeso = UITheme.styledField();
-        gbc.gridx = 1; gbc.gridy = 1; gbc.weightx = 1; gbc.gridwidth = 3;
-        formPanel.add(txtPeso, gbc);
-        gbc.gridwidth = 1;
-
-        // ── Precio Total / Manual / Gramo ─────────────────────────────────
-        gbc.gridx = 0; gbc.gridy = 2; gbc.weightx = 0;
-        formPanel.add(label("Precio Total: "), gbc);
-
-        txtPrecioTotal = new JLabel("0");
-        txtPrecioTotal.setFont(UITheme.F_LABEL);
-        txtPrecioTotal.setForeground(UITheme.TEXT);
-        gbc.gridx = 1; gbc.gridy = 2; gbc.weightx = 0.5;
-        formPanel.add(txtPrecioTotal, gbc);
-
-        txtPrecioTotalManual = new JFormattedTextField();
-        txtPrecioTotalManual.setFont(UITheme.F_BODY);
-        txtPrecioTotalManual.setForeground(UITheme.TEXT);
-        txtPrecioTotalManual.setBorder(UITheme.paddedRound(UITheme.BORDER, 10, 5, 8));
-        txtPrecioTotalManual.setVisible(false);
-        gbc.gridx = 2; gbc.gridy = 2; gbc.weightx = 0.5;
-        formPanel.add(txtPrecioTotalManual, gbc);
-
-        JLabel precioGramoLabel = new JLabel("Precio Gramo:");
-        precioGramoLabel.setFont(UITheme.F_LABEL);
-        precioGramoLabel.setForeground(UITheme.TEXT);
-        gbc.gridx = 3; gbc.gridy = 2; gbc.weightx = 0;
-        formPanel.add(precioGramoLabel, gbc);
-
-        txtPrecioGramo = new JFormattedTextField();
-        txtPrecioGramo.setFont(UITheme.F_BODY);
-        txtPrecioGramo.setForeground(UITheme.TEXT);
-        txtPrecioGramo.setBorder(UITheme.paddedRound(UITheme.BORDER, 10, 5, 8));
-        gbc.gridx = 4; gbc.gridy = 2; gbc.weightx = 0.5;
-        formPanel.add(txtPrecioGramo, gbc);
-
-        // ── Categoría ─────────────────────────────────────────────────────
-        gbc.gridx = 0; gbc.gridy = 3; gbc.weightx = 0;
-        formPanel.add(label("Categoria: "), gbc);
-        cmbCategoria = new JComboBox<>();
-        UITheme.styleCombo(cmbCategoria);
-        gbc.gridx = 1; gbc.gridy = 3; gbc.weightx = 1; gbc.gridwidth = 3;
-        formPanel.add(cmbCategoria, gbc);
-        gbc.gridwidth = 1;
-
-        // ── Socio ─────────────────────────────────────────────────────────
-        gbc.gridx = 0; gbc.gridy = 4; gbc.weightx = 0;
-        formPanel.add(label("Socio"), gbc);
-        socios = new JComboBox<>();
-        UITheme.styleCombo(socios);
-        gbc.gridx = 1; gbc.gridy = 4; gbc.weightx = 1;
-        formPanel.add(socios, gbc);
-
-        // ── Tiene Piedra ──────────────────────────────────────────────────
-        gbc.gridx = 0; gbc.gridy = 5; gbc.weightx = 0;
-        formPanel.add(label("Tiene Piedra:"), gbc);
-        siCheckBox = new JCheckBox("si");
-        siCheckBox.setFont(UITheme.F_BODY);
-        siCheckBox.setForeground(UITheme.TEXT);
-        siCheckBox.setBackground(UITheme.BG);
-        gbc.gridx = 1; gbc.gridy = 5; gbc.weightx = 0;
-        formPanel.add(siCheckBox, gbc);
-        txtInfoPiedra = new JTextArea(2, 20);
-        UITheme.styleArea(txtInfoPiedra);
-        txtInfoPiedra.setBorder(UITheme.paddedRound(UITheme.BORDER, 10, 5, 8));
-        txtInfoPiedra.setVisible(false);
-        gbc.gridx = 2; gbc.gridy = 5; gbc.weightx = 1; gbc.gridwidth = 2;
-        formPanel.add(UITheme.styledScroll(txtInfoPiedra), gbc);
-        gbc.gridwidth = 1;
-
-        // ── Observaciones ─────────────────────────────────────────────────
-        gbc.gridx = 0; gbc.gridy = 6; gbc.weightx = 0; gbc.anchor = GridBagConstraints.NORTHWEST;
-        formPanel.add(label("Observacion: "), gbc);
-        txtObs = new JTextArea(4, 30);
-        UITheme.styleArea(txtObs);
-        gbc.gridx = 1; gbc.gridy = 6; gbc.weightx = 1; gbc.gridwidth = 3;
-        gbc.fill = GridBagConstraints.BOTH; gbc.weighty = 1;
-        formPanel.add(UITheme.styledScroll(txtObs), gbc);
-        gbc.fill = GridBagConstraints.HORIZONTAL; gbc.weighty = 0; gbc.gridwidth = 1;
-        gbc.anchor = GridBagConstraints.WEST;
-
-        // ── Botones ────────────────────────────────────────────────────────
-        btnLimpiar = UITheme.secondaryBtn("Limpiar");
-        btnLimpiar.setPreferredSize(new Dimension(130, 36));
-        btnGuardar = UITheme.primaryBtn("Guardar");
-        btnGuardar.setPreferredSize(new Dimension(130, 36));
-        try {
-            btnLimpiar.setIcon(new ImageIcon(new ImageIcon(getClass().getResource("/limpiar.png")).getImage().getScaledInstance(16, 16, Image.SCALE_SMOOTH)));
-        } catch (Exception ignored) {}
-        try {
-            btnGuardar.setIcon(new ImageIcon(new ImageIcon(getClass().getResource("/guardar.png")).getImage().getScaledInstance(16, 16, Image.SCALE_SMOOTH)));
-        } catch (Exception ignored) {}
-
-        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 16, 4));
-        btnPanel.setBackground(UITheme.BG);
-        btnPanel.add(btnLimpiar);
-        btnPanel.add(btnGuardar);
-
-        // Combinar foto + form
-        JPanel centerPanel = new JPanel(new BorderLayout(4, 4));
-        centerPanel.setBackground(UITheme.BG);
-        centerPanel.add(fotoPanel, BorderLayout.NORTH);
-        centerPanel.add(formPanel, BorderLayout.CENTER);
-        centerPanel.add(btnPanel, BorderLayout.SOUTH);
-
-        mainPanel.add(centerPanel, BorderLayout.CENTER);
-    }
-
-    private JLabel label(String text) {
-        JLabel lbl = new JLabel(text);
-        lbl.setFont(UITheme.F_LABEL);
-        lbl.setForeground(UITheme.TEXT);
-        return lbl;
-    }
-
-    // ── Inicialización de lógica ─────────────────────────────────────────────
 
     private void inicializarTodo() {
-        logicaController = new Controladora(session);
-
-        ImageIcon customIcon;
-        ImageIcon scaledSuccessIcon;
-        try {
-            customIcon = new ImageIcon(new ImageIcon(getClass().getResource("/imprimir.png")).getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH));
-        } catch (Exception e) { customIcon = null; }
-        try {
-            scaledSuccessIcon = new ImageIcon(new ImageIcon(getClass().getResource("/nino.png")).getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH));
-        } catch (Exception e) { scaledSuccessIcon = null; }
-        final ImageIcon finalCustomIcon = customIcon;
-        final ImageIcon finalSuccessIcon = scaledSuccessIcon;
-
-        txtPrecioTotal.setText("0");
+        // Instanciar la controladora de lógica
+        logicaController = new Controladora();
+        ImageIcon Icon = new ImageIcon(getClass().getResource("/imprimir.png"));
+        ImageIcon customIcon = new ImageIcon(Icon.getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH));
+        //
+        ImageIcon successIcon = new ImageIcon(getClass().getResource("/nino.png"));
+        ImageIcon scaledSuccessIcon = new ImageIcon(successIcon.getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH));
+        txtPrecioTotal.setText("0"); // Valor inicial
         txtPrecioTotalManual.setVisible(false);
+        txtInfoPiedra.setVisible(true);
+        txtInfoPiedra.setEditable(false);
+        txtInfoPiedra.setLineWrap(true);
+        txtInfoPiedra.setWrapStyleWord(true);
+        txtInfoPiedra.setText("Sin piedras registradas.");
+        if (btnAgregarPiedraIndependiente == null) {
+            btnAgregarPiedraIndependiente = new JButton();
+        }
+        aplicarEstiloVisual();
 
-        // Listeners para cálculo automático de precio
+        // Listener para txtPeso y txtPrecioGramo
         txtPeso.getDocument().addDocumentListener(new SimpleDocumentListener() {
-            @Override public void update() { actualizarPrecioTotal(); }
-        });
-        txtPrecioGramo.getDocument().addDocumentListener(new SimpleDocumentListener() {
-            @Override public void update() { actualizarPrecioTotal(); }
+            @Override
+            public void update() {
+                actualizarPrecioTotal();
+            }
         });
 
-        // Formato numérico
+        txtPrecioGramo.getDocument().addDocumentListener(new SimpleDocumentListener() {
+            @Override
+            public void update() {
+                actualizarPrecioTotal();
+            }
+        });
+
+
+        // Configurar símbolos personalizados para el formato
         DecimalFormatSymbols symbols = new DecimalFormatSymbols();
-        symbols.setGroupingSeparator('\'');
-        symbols.setDecimalSeparator('.');
+        symbols.setGroupingSeparator('\''); // Separador de miles: apóstrofe
+        symbols.setDecimalSeparator('.');  // Separador decimal: punto
+
+        // Configurar el formato con los símbolos personalizados
         DecimalFormat decimalFormat = new DecimalFormat("#,##0.###", symbols);
+        decimalFormat.setGroupingUsed(true);
+
         NumberFormatter numberFormatter = new NumberFormatter(decimalFormat);
-        numberFormatter.setAllowsInvalid(false);
+        numberFormatter.setAllowsInvalid(false); // No permitir valores no válidos
         numberFormatter.setValueClass(Double.class);
-        txtPrecioGramo.setFormatterFactory(new DefaultFormatterFactory(numberFormatter));
+
+        txtPrecioGramo.setFormatterFactory(new javax.swing.text.DefaultFormatterFactory(numberFormatter));
         txtPrecioTotalManual.setFormatterFactory(new DefaultFormatterFactory(numberFormatter));
         txtPrecioTotalManual.setFocusLostBehavior(JFormattedTextField.COMMIT_OR_REVERT);
         txtPrecioTotalManual.setValue(0.0);
+        txtPrecioTotalManual.setVisible(false);
+
+        if (cmbCategoria == null || socios == null) {
+            throw new IllegalStateException("Faltan componentes en CargarDatos.form (cmbCategoria/socios). Revisa el binding del formulario.");
+        }
 
         cargarCategoriasDesdeBD();
         cargarSociosDesdeBD();
 
+        siCheckBox.setText("Agregar una piedra independiente");
+        siCheckBox.setSelected(false);
         siCheckBox.addActionListener(e -> {
-            boolean conPiedra = siCheckBox.isSelected();
-            txtInfoPiedra.setVisible(conPiedra);
-            txtPrecioGramo.setEnabled(!conPiedra);
-            txtPrecioTotal.setVisible(!conPiedra);
-            txtPrecioTotalManual.setVisible(conPiedra);
-            if (conPiedra) {
-                txtPrecioTotalManual.setValue(Double.parseDouble(txtPrecioTotal.getText().replace("'", "")));
-            } else {
-                actualizarPrecioTotal();
+            if (siCheckBox.isSelected()) {
+                siCheckBox.setSelected(false);
+                solicitarYAgregarPiedraIndependiente();
             }
         });
+        btnAgregarPiedraIndependiente.addActionListener(e -> solicitarYAgregarPiedraIndependiente());
 
         btnLimpiar.addActionListener(e -> {
             txtNombre.setText("");
@@ -263,9 +132,11 @@ public class CargarDatos {
             txtPeso.setText("");
             txtPrecioGramo.setText("");
             cmbCategoria.setSelectedIndex(0);
-            seleccionarSocioPorDefecto();
+            aplicarSocioPorDefecto();
             txtInfoPiedra.setText("");
             siCheckBox.setSelected(false);
+            piedrasIngresadas.clear();
+            refrescarResumenPiedras();
         });
 
         btnGuardar.addActionListener(e -> {
@@ -273,75 +144,188 @@ public class CargarDatos {
                 String nombre = txtNombre.getText();
                 String categoria = (String) cmbCategoria.getSelectedItem();
                 String socioSeleccionado = (String) socios.getSelectedItem();
-                boolean si = siCheckBox.isSelected();
-                String infoPiedra = txtInfoPiedra.getText();
+                boolean tienePiedra = !piedrasIngresadas.isEmpty();
+                String infoPiedra = construirInfoPiedra();
                 String obs = txtObs.getText();
 
-                ImageIcon errorIcon;
-                try { errorIcon = new ImageIcon(new ImageIcon(getClass().getResource("/llora.png")).getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH)); }
-                catch (Exception ex) { errorIcon = null; }
-
                 if (nombre.isEmpty()) {
-                    JOptionPane.showMessageDialog(mainPanel, "El nombre de la joya no puede estar vacío.", "Error de entrada", JOptionPane.ERROR_MESSAGE, errorIcon);
+                    JOptionPane.showMessageDialog(
+                            mainPanel,
+                            "El nombre de la joya no puede estar vacío.",
+                            "Error de entrada",
+                            JOptionPane.ERROR_MESSAGE,
+                            new ImageIcon(
+                                    new ImageIcon(getClass().getResource("/llora.png"))
+                                            .getImage()
+                                            .getScaledInstance(50, 50, Image.SCALE_SMOOTH)
+                            )
+                    );
                     return;
                 }
+
                 if (cmbCategoria.getItemCount() <= 1) {
-                    JOptionPane.showMessageDialog(mainPanel, "No hay categorías creadas. Debe crear al menos una antes de guardar.", "Error de entrada", JOptionPane.ERROR_MESSAGE, errorIcon);
+                    JOptionPane.showMessageDialog(
+                            mainPanel,
+                            "No hay categorías creadas. Debe crear al menos una antes de guardar.",
+                            "Error de entrada",
+                            JOptionPane.ERROR_MESSAGE,
+                            new ImageIcon(
+                                    new ImageIcon(getClass().getResource("/llora.png"))
+                                            .getImage()
+                                            .getScaledInstance(50, 50, Image.SCALE_SMOOTH)
+                            )
+                    );
                     return;
                 }
+
                 if (categoria == null || cmbCategoria.getSelectedIndex() == 0) {
-                    JOptionPane.showMessageDialog(mainPanel, "Debe seleccionar una categoría válida.", "Error de entrada", JOptionPane.ERROR_MESSAGE, errorIcon);
+                    JOptionPane.showMessageDialog(
+                            mainPanel,
+                            "Debe seleccionar una categoría válida.",
+                            "Error de entrada",
+                            JOptionPane.ERROR_MESSAGE,
+                            new ImageIcon(
+                                    new ImageIcon(getClass().getResource("/llora.png"))
+                                            .getImage()
+                                            .getScaledInstance(50, 50, Image.SCALE_SMOOTH)
+                            )
+                    );
                     return;
                 }
+
                 if (socios.getItemCount() <= 1) {
-                    JOptionPane.showMessageDialog(mainPanel, "No hay socios creados. Debe crear al menos uno antes de guardar.", "Error de entrada", JOptionPane.ERROR_MESSAGE, errorIcon);
+                    JOptionPane.showMessageDialog(
+                            mainPanel,
+                            "No hay socios creados. Debe crear al menos uno antes de guardar.",
+                            "Error de entrada",
+                            JOptionPane.ERROR_MESSAGE,
+                            new ImageIcon(
+                                    new ImageIcon(getClass().getResource("/llora.png"))
+                                            .getImage()
+                                            .getScaledInstance(50, 50, Image.SCALE_SMOOTH)
+                            )
+                    );
                     return;
                 }
+
                 if (socioSeleccionado == null || socios.getSelectedIndex() == 0) {
-                    JOptionPane.showMessageDialog(mainPanel, "Debe seleccionar un socio válido.", "Error de entrada", JOptionPane.ERROR_MESSAGE, errorIcon);
+                    JOptionPane.showMessageDialog(
+                            mainPanel,
+                            "Debe seleccionar un socio válido.",
+                            "Error de entrada",
+                            JOptionPane.ERROR_MESSAGE,
+                            new ImageIcon(
+                                    new ImageIcon(getClass().getResource("/llora.png"))
+                                            .getImage()
+                                            .getScaledInstance(50, 50, Image.SCALE_SMOOTH)
+                            )
+                    );
                     return;
                 }
+
                 if (obs.isEmpty()) {
-                    JOptionPane.showMessageDialog(mainPanel, "Debe proporcionar una descripción u observaciones.", "Error de entrada", JOptionPane.ERROR_MESSAGE, errorIcon);
+                    JOptionPane.showMessageDialog(
+                            mainPanel,
+                            "Debe proporcionar una descripción u observaciones.",
+                            "Error de entrada",
+                            JOptionPane.ERROR_MESSAGE,
+                            new ImageIcon(
+                                    new ImageIcon(getClass().getResource("/llora.png"))
+                                            .getImage()
+                                            .getScaledInstance(50, 50, Image.SCALE_SMOOTH)
+                            )
+                    );
                     return;
                 }
 
                 double peso = Double.parseDouble(txtPeso.getText());
-                double precioTotal;
-                if (si) {
-                    Number valorManual = (Number) txtPrecioTotalManual.getValue();
-                    precioTotal = (valorManual != null) ? valorManual.doubleValue() : 0.0;
-                } else {
-                    double precioGramo = txtPrecioGramo.getText().isEmpty()
-                            ? 0.0 : Double.parseDouble(txtPrecioGramo.getText().replace("'", ""));
-                    precioTotal = peso * precioGramo;
-                }
+
+                double precioGramo = txtPrecioGramo.getText().isEmpty()
+                        ? 0.0
+                        : Double.parseDouble(txtPrecioGramo.getText().replace("'", ""));
+                double precioBase = peso * precioGramo;
+                double precioTotal = precioBase + calcularTotalPiedras();
 
                 String precioTotalStr = formatearNumero(precioTotal);
 
                 boolean aplicadaDirecto = logicaController.crearJoyaConAutorizacion(
-                        session, nombre, precioTotalStr, peso, categoria, socioSeleccionado, obs, si, infoPiedra
+                        session,
+                        nombre,
+                        precioTotalStr,
+                        peso,
+                        categoria,
+                        socioSeleccionado,
+                        obs,
+                        tienePiedra,
+                        infoPiedra
                 );
+                String idGenerado = ""; // No disponible en esta versión
 
-                String mensaje = (aplicadaDirecto ? "Joya guardada correctamente:\n" : "Solicitud enviada para aprobación:\n")
-                        + "Nombre: " + nombre + "\n"
-                        + "Precio: " + precioTotalStr + "\n"
-                        + "Peso: " + peso + "\n"
-                        + "Categoría: " + categoria + "\n"
-                        + "Socio: " + socioSeleccionado + "\n"
-                        + "Observaciones: " + obs;
+                if (!aplicadaDirecto) {
+                    imprimirEtiquetaPendiente(
+                            idGenerado,
+                            precioTotalStr,
+                            peso,
+                            tienePiedra,
+                            infoPiedra,
+                            categoria
+                    );
+                }
+
+                String mensaje = (aplicadaDirecto ? "Joya guardada correctamente:\n" : "Solicitud enviada para aprobación:\n") +
+                        (idGenerado.isBlank() ? "" : "ID: " + idGenerado + "\n") +
+                        "Nombre: " + nombre + "\n" +
+                        "Precio: " + precioTotalStr + "\n" +
+                        "Peso: " + peso + "\n" +
+                        "Categoría: " + categoria + "\n" +
+                        "Socio: " + socioSeleccionado + "\n" +
+                        "Observaciones: " + obs;
 
                 boolean reimprimir = true;
                 while (reimprimir) {
-                    Object[] opciones = {"Aceptar", "Volver a imprimir"};
+                    Object[] opciones = new Object[]{"Aceptar", "Volver a imprimir"};
                     int opcionSeleccionada = JOptionPane.showOptionDialog(
-                            mainPanel, mensaje, "Éxito",
-                            JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE,
-                            finalSuccessIcon, opciones, opciones[0]
+                            mainPanel,
+                            mensaje,
+                            "Éxito",
+                            JOptionPane.YES_NO_OPTION,
+                            JOptionPane.INFORMATION_MESSAGE,
+                            scaledSuccessIcon,
+                            opciones,
+                            opciones[0]
                     );
+
                     if (opcionSeleccionada == JOptionPane.NO_OPTION) {
-                        logicaController.volverImprimir(nombre, precioTotalStr, peso, categoria, obs, si, infoPiedra);
-                        JOptionPane.showMessageDialog(mainPanel, "Imprimiendo la joya nuevamente:\n" + mensaje, "Reimpresión", JOptionPane.INFORMATION_MESSAGE, finalCustomIcon);
+                        if (aplicadaDirecto) {
+                            logicaController.volverImprimir(
+                                    nombre,
+                                    precioTotalStr,
+                                    peso,
+                                    categoria,
+                                    obs,
+                                    tienePiedra,
+                                    infoPiedra
+                            );
+                        } else {
+                            imprimirEtiquetaPendiente(
+                                    idGenerado,
+                                    precioTotalStr,
+                                    peso,
+                                    tienePiedra,
+                                    infoPiedra,
+                                    categoria
+                            );
+                        }
+
+                        JOptionPane.showMessageDialog(
+                                mainPanel,
+                                aplicadaDirecto
+                                        ? "Imprimiendo la joya nuevamente:\n" + mensaje
+                                        : "Imprimiendo la etiqueta nuevamente:\n" + mensaje,
+                                "Reimpresión",
+                                JOptionPane.INFORMATION_MESSAGE,
+                                customIcon
+                        );
                     } else {
                         reimprimir = false;
                     }
@@ -351,27 +335,41 @@ public class CargarDatos {
                 txtPeso.setText("");
                 txtObs.setText("");
                 cmbCategoria.setSelectedIndex(0);
-                seleccionarSocioPorDefecto();
+                aplicarSocioPorDefecto();
                 txtInfoPiedra.setText("");
                 siCheckBox.setSelected(false);
+                piedrasIngresadas.clear();
                 txtPrecioGramo.setText("");
                 txtPrecioTotal.setText("0");
                 txtPrecioTotalManual.setValue(null);
+                refrescarResumenPiedras();
 
             } catch (Exception ex) {
-                ImageIcon errorIcon;
-                try { errorIcon = new ImageIcon(new ImageIcon(getClass().getResource("/llora.png")).getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH)); }
-                catch (Exception e2) { errorIcon = null; }
-                JOptionPane.showMessageDialog(mainPanel, "Error al guardar la joya: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE, errorIcon);
+                JOptionPane.showMessageDialog(
+                        mainPanel,
+                        "Error al guardar la joya: " + ex.getMessage(),
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE,
+                        new ImageIcon(
+                                new ImageIcon(getClass().getResource("/llora.png"))
+                                        .getImage()
+                                        .getScaledInstance(50, 50, Image.SCALE_SMOOTH)
+                        )
+                );
             }
         });
+    }
+
+    public JPanel getMainPanel() {
+        return mainPanel;
     }
 
     private void cargarCategoriasDesdeBD() {
         cmbCategoria.removeAllItems();
         cmbCategoria.addItem("Seleccione categoría...");
         try {
-            for (Categoria categoria : logicaController.obtenerCategorias()) {
+            List<Categoria> categorias = logicaController.obtenerCategorias();
+            for (Categoria categoria : categorias) {
                 cmbCategoria.addItem(categoria.getNombre());
             }
         } catch (Exception ex) {
@@ -380,60 +378,475 @@ public class CargarDatos {
     }
 
     private void cargarSociosDesdeBD() {
+        if (socios == null) {
+            return;
+        }
         socios.removeAllItems();
         socios.addItem("Seleccione socio...");
         try {
-            for (Socio socio : logicaController.obtenerSocios()) {
-                socios.addItem(socio.getNombre());
+            List<Socio> socios = logicaController.obtenerSocios();
+            for (Socio socio : socios) {
+                this.socios.addItem(socio.getNombre());
             }
-            seleccionarSocioPorDefecto();
+            aplicarSocioPorDefecto();
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(mainPanel, "No se pudieron cargar los socios: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
-    private void seleccionarSocioPorDefecto() {
+    private void aplicarSocioPorDefecto() {
+        if (socios == null || socios.getItemCount() == 0) {
+            return;
+        }
+
+        // Si existe el socio "punto", se selecciona por defecto.
         for (int i = 0; i < socios.getItemCount(); i++) {
-            String item = socios.getItemAt(i);
-            if (item != null && item.trim().equalsIgnoreCase(socioPorDefecto)) {
+            String opcion = socios.getItemAt(i);
+            if (opcion != null && "punto".equalsIgnoreCase(opcion.trim())) {
                 socios.setSelectedIndex(i);
                 return;
             }
         }
+
         socios.setSelectedIndex(0);
     }
 
+    private void imprimirEtiquetaPendiente(String idEtiqueta, String precio, double peso, Boolean tienePiedra, String infoPiedra, String categoria) {
+        Impresora impresora = new Impresora();
+        String zplData = logicaController.generarZPLEtiqueta(
+                (idEtiqueta == null || idEtiqueta.isBlank()) ? "PEND" : idEtiqueta,
+                precio,
+                peso,
+                Boolean.TRUE.equals(tienePiedra),
+                infoPiedra,
+                categoria
+        );
+        impresora.imprimirEtiqueta(zplData);
+    }
+
     private void actualizarPrecioTotal() {
-        if (siCheckBox != null && siCheckBox.isSelected()) return;
         try {
             String textoGramo = txtPrecioGramo.getText().replace("'", "");
             String textoPeso = txtPeso.getText();
+
             if (!textoGramo.isEmpty() && !textoPeso.isEmpty()) {
-                txtPrecioTotal.setText(formatearNumero(Double.parseDouble(textoPeso) * Double.parseDouble(textoGramo)));
+                double precioGramo = Double.parseDouble(textoGramo);
+                double peso = Double.parseDouble(textoPeso);
+                double precioBase = peso * precioGramo;
+                double precioConPiedras = precioBase + calcularTotalPiedras();
+                String precioFormateado = formatearNumero(precioConPiedras);
+                txtPrecioTotal.setText(precioFormateado);
             } else {
-                txtPrecioTotal.setText("0");
+                txtPrecioTotal.setText(formatearNumero(calcularTotalPiedras()));
             }
         } catch (NumberFormatException ex) {
-            txtPrecioTotal.setText("0");
+            txtPrecioTotal.setText(formatearNumero(calcularTotalPiedras()));
         }
     }
 
-    public JPanel getMainPanel() {
-        return mainPanel;
+    private void solicitarYAgregarPiedraIndependiente() {
+        JTextField quilatesField = new JTextField();
+        JTextField precioQuilateField = new JTextField();
+        instalarMascaraPrecio(precioQuilateField);
+        JComboBox<String> tipoPiedraCombo = new JComboBox<>(new String[]{
+                "Diamante", "Esmeralda", "Rubí", "Zafiro", "Topacio", "Hechura", "Otro"
+        });
+
+        JPanel panel = new JPanel(new GridLayout(0, 1, 6, 6));
+        panel.add(new JLabel("Quilates de la piedra:"));
+        panel.add(quilatesField);
+        panel.add(new JLabel("Tipo de piedra:"));
+        panel.add(tipoPiedraCombo);
+        panel.add(new JLabel("Precio por quilate:"));
+        panel.add(precioQuilateField);
+
+        int result = JOptionPane.showConfirmDialog(
+                mainPanel,
+                panel,
+                "Agregar piedra independiente",
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE
+        );
+
+        if (result != JOptionPane.OK_OPTION) {
+            return;
+        }
+
+        try {
+            double quilates = parseNumeroLibre(quilatesField.getText());
+            double precioPorQuilate = parseNumeroLibre(precioQuilateField.getText());
+            String tipoPiedra = tipoPiedraCombo.getSelectedItem() == null
+                    ? "Otro"
+                    : tipoPiedraCombo.getSelectedItem().toString().trim();
+            if (quilates <= 0 || precioPorQuilate <= 0) {
+                throw new IllegalArgumentException("Los quilates y el precio por quilate deben ser mayores a 0.");
+            }
+
+            piedrasIngresadas.add(new PiedraCosteo(
+                    quilates,
+                    precioPorQuilate,
+                    null,
+                    "independiente",
+                    tipoPiedra
+            ));
+            refrescarResumenPiedras();
+            actualizarPrecioTotal();
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(
+                    mainPanel,
+                    "Datos de piedra inválidos: " + ex.getMessage(),
+                    "Error de entrada",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
+    }
+
+    private double parseNumeroLibre(String valor) {
+        String normalizado = valor == null ? "" : valor.trim().replace("'", "").replace(',', '.');
+        if (normalizado.isEmpty()) {
+            throw new IllegalArgumentException("Debe ingresar un número.");
+        }
+        return Double.parseDouble(normalizado);
+    }
+
+    private void instalarMascaraPrecio(JTextField campo) {
+        AbstractDocument doc = (AbstractDocument) campo.getDocument();
+        doc.setDocumentFilter(new DocumentFilter() {
+            private boolean actualizando;
+
+            @Override
+            public void insertString(FilterBypass fb, int offset, String string, AttributeSet attr) throws BadLocationException {
+                replace(fb, offset, 0, string, attr);
+            }
+
+            @Override
+            public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs) throws BadLocationException {
+                if (actualizando) {
+                    super.replace(fb, offset, length, text, attrs);
+                    return;
+                }
+
+                String actual = fb.getDocument().getText(0, fb.getDocument().getLength());
+                String reemplazo = text == null ? "" : text;
+                String propuesto = actual.substring(0, offset) + reemplazo + actual.substring(offset + length);
+                int caretPropuesto = offset + reemplazo.length();
+                aplicarMascaraPrecio(fb, campo, propuesto, caretPropuesto);
+            }
+
+            @Override
+            public void remove(FilterBypass fb, int offset, int length) throws BadLocationException {
+                replace(fb, offset, length, "", null);
+            }
+
+            private void aplicarMascaraPrecio(FilterBypass fb, JTextField campo, String propuesto, int caretPropuesto) throws BadLocationException {
+                String digitos = extraerDigitos(propuesto);
+                String formateado = digitos.isEmpty() ? "" : formatearConApostrofes(digitos);
+
+                int digitosAntesCaret = contarDigitosHasta(propuesto, caretPropuesto);
+                int nuevaPosCaret = posicionSegunDigitos(formateado, digitosAntesCaret);
+
+                actualizando = true;
+                fb.replace(0, fb.getDocument().getLength(), formateado, null);
+                actualizando = false;
+
+                SwingUtilities.invokeLater(() -> campo.setCaretPosition(Math.min(nuevaPosCaret, campo.getText().length())));
+            }
+        });
+    }
+
+    private int contarDigitosHasta(String texto, int limite) {
+        int max = Math.min(Math.max(limite, 0), texto.length());
+        int cuenta = 0;
+        for (int i = 0; i < max; i++) {
+            if (Character.isDigit(texto.charAt(i))) {
+                cuenta++;
+            }
+        }
+        return cuenta;
+    }
+
+    private int posicionSegunDigitos(String textoFormateado, int cantidadDigitos) {
+        if (cantidadDigitos <= 0) {
+            return 0;
+        }
+        int vistos = 0;
+        for (int i = 0; i < textoFormateado.length(); i++) {
+            if (Character.isDigit(textoFormateado.charAt(i))) {
+                vistos++;
+                if (vistos == cantidadDigitos) {
+                    return i + 1;
+                }
+            }
+        }
+        return textoFormateado.length();
+    }
+
+    private String extraerDigitos(String valor) {
+        if (valor == null) {
+            return "";
+        }
+        String soloDigitos = valor.replaceAll("\\D", "");
+        return soloDigitos.replaceFirst("^0+(?!$)", "");
+    }
+
+    private String formatearConApostrofes(String digitos) {
+        if (digitos == null || digitos.isBlank()) {
+            return "";
+        }
+        StringBuilder invertido = new StringBuilder(digitos).reverse();
+        StringBuilder conSeparador = new StringBuilder();
+        for (int i = 0; i < invertido.length(); i++) {
+            if (i > 0 && i % 3 == 0) {
+                conSeparador.append('\'');
+            }
+            conSeparador.append(invertido.charAt(i));
+        }
+        return conSeparador.reverse().toString();
+    }
+
+    private void refrescarResumenPiedras() {
+        if (piedrasIngresadas.isEmpty()) {
+            txtInfoPiedra.setText("Sin piedras registradas.");
+            txtInfoPiedra.setCaretPosition(0);
+            actualizarPrecioTotal();
+            return;
+        }
+
+        StringBuilder sb = new StringBuilder();
+        String separador = "----------------------------------------";
+        double totalPiedras = 0.0;
+        for (int i = 0; i < piedrasIngresadas.size(); i++) {
+            PiedraCosteo p = piedrasIngresadas.get(i);
+            totalPiedras += p.total();
+            String origen = p.loteNombre();
+            sb.append("Piedra ").append(i + 1).append('\n')
+                    .append("  Origen    : ").append(origen).append('\n')
+                    .append("  Tipo      : ").append(p.tipoPiedra() != null && !p.tipoPiedra().isBlank() ? p.tipoPiedra() : "-").append('\n')
+                    .append("  Quilates  : ").append(formatearNumero(p.peso())).append('\n')
+                    .append("  P/quilate : ").append(formatearNumero(p.precioPorQuilate())).append('\n')
+                    .append("  Subtotal  : ").append(formatearNumero(p.total())).append('\n');
+            if (i < piedrasIngresadas.size() - 1) {
+                sb.append(separador).append('\n');
+            }
+        }
+        sb.append(separador).append('\n')
+                .append("TOTAL PIEDRAS (QUILATES): ")
+                .append(formatearNumero(totalPiedras));
+        txtInfoPiedra.setText(sb.toString());
+        txtInfoPiedra.setCaretPosition(0);
+        actualizarPrecioTotal();
+    }
+
+    private double calcularTotalPiedras() {
+        double total = 0.0;
+        for (PiedraCosteo p : piedrasIngresadas) {
+            total += p.total();
+        }
+        return total;
+    }
+
+    private String construirInfoPiedra() {
+        if (piedrasIngresadas.isEmpty()) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < piedrasIngresadas.size(); i++) {
+            PiedraCosteo p = piedrasIngresadas.get(i);
+            if (i > 0) {
+                sb.append(" | ");
+            }
+            sb.append("P").append(i + 1).append("(");
+            sb.append("origen=independiente,");
+            if (p.tipoPiedra() != null && !p.tipoPiedra().isBlank()) {
+                sb.append("tipo=")
+                        .append(p.tipoPiedra())
+                        .append(",");
+            }
+            sb.append("peso=")
+                    .append(formatearNumero(p.peso()))
+                    .append(",precioQ=")
+                    .append(formatearNumero(p.precioPorQuilate()))
+                    .append(",total=")
+                    .append(formatearNumero(p.total()))
+                    .append(")");
+        }
+        return sb.toString();
+    }
+
+     private void aplicarEstiloVisual() {
+         mainPanel.removeAll();
+         mainPanel.setLayout(new BorderLayout(20, 20));
+         mainPanel.setBackground(UITheme.BG);
+         mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+         // Inicializar componentes si no existen
+         if (txtNombre == null) txtNombre = UITheme.styledField();
+         if (txtPeso == null) txtPeso = UITheme.styledField();
+         if (txtPrecioGramo == null) txtPrecioGramo = new JFormattedTextField();
+         if (cmbCategoria == null) cmbCategoria = new JComboBox<>();
+         if (socios == null) socios = new JComboBox<>();
+         if (txtObs == null) txtObs = new JTextArea(4, 30);
+         if (txtInfoPiedra == null) txtInfoPiedra = new JTextArea(5, 30);
+         if (txtPrecioTotal == null) txtPrecioTotal = new JLabel("0");
+         if (siCheckBox == null) siCheckBox = new JCheckBox();
+         if (btnAgregarPiedraIndependiente == null) btnAgregarPiedraIndependiente = UITheme.secondaryBtn("Agregar piedra independiente");
+         if (btnLimpiar == null) btnLimpiar = UITheme.secondaryBtn("Limpiar");
+         if (btnGuardar == null) btnGuardar = UITheme.primaryBtn("Guardar joya");
+
+         // Aplicar estilos
+         UITheme.styleField(txtNombre);
+         UITheme.styleField(txtPeso);
+         UITheme.styleField(txtPrecioGramo);
+         UITheme.styleCombo(cmbCategoria);
+         UITheme.styleCombo(socios);
+         UITheme.styleArea(txtObs);
+         UITheme.styleArea(txtInfoPiedra);
+         txtInfoPiedra.setEditable(false);
+         txtInfoPiedra.setBackground(Color.WHITE);
+         txtInfoPiedra.setFont(new Font("Monospaced", Font.PLAIN, 12));
+         txtPrecioTotal.setFont(new Font("SansSerif", Font.BOLD, 24));
+         txtPrecioTotal.setForeground(new Color(34, 197, 94)); // Verde para precio
+
+         // Header
+         JPanel headerPanel = UITheme.card(15);
+         headerPanel.setLayout(new BorderLayout());
+         headerPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
+         JLabel titleLabel = new JLabel("Cargar Datos de Joya 💎", SwingConstants.CENTER);
+         titleLabel.setFont(new Font("SansSerif", Font.BOLD, 24));
+         titleLabel.setForeground(UITheme.TEXT);
+         JLabel subtitleLabel = new JLabel("Ingresa la información de la joya y calcula el costo total.", SwingConstants.CENTER);
+         subtitleLabel.setFont(new Font("SansSerif", Font.PLAIN, 14));
+         subtitleLabel.setForeground(UITheme.TEXT_MUTED);
+         headerPanel.add(titleLabel, BorderLayout.NORTH);
+         headerPanel.add(subtitleLabel, BorderLayout.CENTER);
+
+         // Panel izquierdo: Formulario
+         JPanel leftPanel = new JPanel(new BorderLayout(10, 10));
+         leftPanel.setOpaque(false);
+
+         // Información básica
+         JPanel basicInfoPanel = UITheme.card(10);
+         basicInfoPanel.setLayout(new GridBagLayout());
+         basicInfoPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+         GridBagConstraints gbc = new GridBagConstraints();
+         gbc.insets = new Insets(5, 5, 5, 5);
+         gbc.fill = GridBagConstraints.HORIZONTAL;
+         gbc.weightx = 1.0;
+
+         gbc.gridx = 0; gbc.gridy = 0;
+         basicInfoPanel.add(createLabeledField("Nombre:", txtNombre), gbc);
+         gbc.gridy = 1;
+         basicInfoPanel.add(createLabeledField("Categoría:", cmbCategoria), gbc);
+         gbc.gridy = 2;
+         basicInfoPanel.add(createLabeledField("Socio:", socios), gbc);
+         gbc.gridy = 3;
+         basicInfoPanel.add(createLabeledField("Peso (g):", txtPeso), gbc);
+         gbc.gridy = 4;
+         basicInfoPanel.add(createLabeledField("Precio por gramo:", txtPrecioGramo), gbc);
+
+         // Observaciones
+         JPanel obsPanel = UITheme.card(10);
+         obsPanel.setLayout(new BorderLayout());
+         obsPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+         obsPanel.add(new JLabel("Observaciones:"), BorderLayout.NORTH);
+         JScrollPane obsScroll = UITheme.styledScroll(txtObs);
+         obsScroll.setPreferredSize(new Dimension(0, 80));
+         obsPanel.add(obsScroll, BorderLayout.CENTER);
+
+         leftPanel.add(basicInfoPanel, BorderLayout.NORTH);
+         leftPanel.add(obsPanel, BorderLayout.CENTER);
+
+         // Panel derecho: Resumen y piedras
+         JPanel rightPanel = new JPanel(new BorderLayout(10, 10));
+         rightPanel.setOpaque(false);
+
+         // Resumen de precio
+         JPanel pricePanel = UITheme.card(10);
+         pricePanel.setLayout(new BorderLayout());
+         pricePanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+         pricePanel.add(new JLabel("Precio Total:", SwingConstants.CENTER), BorderLayout.NORTH);
+         txtPrecioTotal.setHorizontalAlignment(SwingConstants.CENTER);
+         pricePanel.add(txtPrecioTotal, BorderLayout.CENTER);
+
+         // Piedras
+         JPanel stonesPanel = UITheme.card(10);
+         stonesPanel.setLayout(new BorderLayout());
+         stonesPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+         stonesPanel.add(new JLabel("Piedras:"), BorderLayout.NORTH);
+         JScrollPane stonesScroll = UITheme.styledScroll(txtInfoPiedra);
+         stonesScroll.setPreferredSize(new Dimension(0, 150));
+         stonesPanel.add(stonesScroll, BorderLayout.CENTER);
+
+         // Botones para piedras
+         JPanel stonesButtons = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 5));
+         stonesButtons.setOpaque(false);
+         stonesButtons.add(siCheckBox);
+         stonesButtons.add(btnAgregarPiedraIndependiente);
+         stonesPanel.add(stonesButtons, BorderLayout.SOUTH);
+
+         rightPanel.add(pricePanel, BorderLayout.NORTH);
+         rightPanel.add(stonesPanel, BorderLayout.CENTER);
+
+         // Panel inferior: Botones de acción
+         JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
+         actionPanel.setOpaque(false);
+         actionPanel.add(btnLimpiar);
+         actionPanel.add(btnGuardar);
+
+         // Combinar todo
+         JPanel contentPanel = new JPanel(new BorderLayout(20, 20));
+         contentPanel.setOpaque(false);
+         contentPanel.add(leftPanel, BorderLayout.WEST);
+         contentPanel.add(rightPanel, BorderLayout.EAST);
+
+         mainPanel.add(headerPanel, BorderLayout.NORTH);
+         mainPanel.add(contentPanel, BorderLayout.CENTER);
+         mainPanel.add(actionPanel, BorderLayout.SOUTH);
+
+         mainPanel.revalidate();
+         mainPanel.repaint();
+     }
+
+     private JPanel createLabeledField(String label, JComponent field) {
+         JPanel panel = new JPanel(new BorderLayout(5, 5));
+         panel.setOpaque(false);
+         panel.add(new JLabel(label), BorderLayout.WEST);
+         panel.add(field, BorderLayout.CENTER);
+         return panel;
+     }
+
+    private record PiedraCosteo(double peso, double precioPorQuilate, Long loteId, String loteNombre, String tipoPiedra) {
+        double total() {
+            return peso * precioPorQuilate;
+        }
     }
 
     @FunctionalInterface
     interface SimpleDocumentListener extends javax.swing.event.DocumentListener {
         void update();
-        @Override default void insertUpdate(javax.swing.event.DocumentEvent e) { update(); }
-        @Override default void removeUpdate(javax.swing.event.DocumentEvent e) { update(); }
-        @Override default void changedUpdate(javax.swing.event.DocumentEvent e) { update(); }
+
+        @Override
+        default void insertUpdate(javax.swing.event.DocumentEvent e) {
+            update();
+        }
+
+        @Override
+        default void removeUpdate(javax.swing.event.DocumentEvent e) {
+            update();
+        }
+
+        @Override
+        default void changedUpdate(javax.swing.event.DocumentEvent e) {
+            update();
+        }
     }
 
     public static String formatearNumero(double numero) {
         DecimalFormatSymbols symbols = new DecimalFormatSymbols();
         symbols.setGroupingSeparator('\'');
         symbols.setDecimalSeparator('.');
-        return new DecimalFormat("#,##0.###", symbols).format(numero);
+
+        DecimalFormat formatter = new DecimalFormat("#,##0.###", symbols);
+        return formatter.format(numero);
     }
 }
