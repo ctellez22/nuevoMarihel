@@ -402,25 +402,50 @@ public class Controladora {
                      "^FO179,70^A0N,19,19^FD" + idDisplayOrId + "^FS\n" +
                      "^XZ";
          } else if (tienePiedra) {
-             // Etiqueta estándar para joyas con piedra
+             // Etiqueta estándar para joyas con piedra (nuevos tamaños)
              return "^XA\n" +
                      "^PW984\n" +
                      "^LL102\n" +
-                     "^FO30,28^A0N,17,17^FD  " + precio + "M ^FS\n" +
-                     "^FO30,60^A0N,17,17^FD " +peso+"/"+ infoPiedra + " ^FS\n" +
-                     "^FO433,15^BY1,3,50^BCN,50,N,N^FD" + idDisplayOrId + "^FS\n" +
-                     "^FO444,70^A0N,24,24^FD" + idDisplayOrId + "^FS\n" +
+                     "^FO180,28^A0N,20,20^FD  " + precio + " ^FS\n" +
+                     "^FO180,60^A0N,17,17^FD " + peso + "/" + infoPiedra + " ^FS\n" +
+                     "^FO350,15^BY1,3,50^BCN,50,N,N^FD" + idDisplayOrId + "^FS\n" +
+                     "^FO365,70^A0N,19,19^FD" + idDisplayOrId + "^FS\n" +
                      "^XZ";
          } else {
-             // Etiqueta estándar
+             // Etiqueta estándar (nuevos tamaños)
              return "^XA\n" +
                      "^PW984\n" +
                      "^LL102\n" +
-                     "^FO30,28^A0N,24,24^FD  " + peso + "M ^FS\n" +
-                     "^FO30,58^A0N,19,19^FD" + precio + " ^FS\n" +
-                     "^FO433,15^BY1,3,50^BCN,50,N,N^FD" + idDisplayOrId + "^FS\n" +
-                     "^FO454,70^A0N,19,19^FD" + idDisplayOrId + "^FS\n" +
+                     "^FO180,28^A0N,24,24^FD  " + peso + " ^FS\n" +
+                     "^FO180,58^A0N,19,19^FD" + precio + " ^FS\n" +
+                     "^FO350,15^BY1,3,50^BCN,50,N,N^FD" + idDisplayOrId + "^FS\n" +
+                     "^FO365,70^A0N,19,19^FD" + idDisplayOrId + "^FS\n" +
                      "^XZ";
          }
      }
+
+    // Método auxiliar para determinar el tipo de piedra basado en la categoría
+    private String determinarTipoPiedra(String categoria) {
+        if (categoria == null || categoria.isEmpty()) {
+            return ""; // Por defecto vacío si no hay categoría
+        }
+
+        String catLower = categoria.toLowerCase();
+
+        // Mapeo de categorías a tipos de piedra
+        if (catLower.contains("esmeralda") || catLower.contains("esm")) {
+            return "esm";
+        } else if (catLower.contains("rubi") || catLower.contains("ruby")) {
+            return "rub";
+        } else if (catLower.contains("zafiro") || catLower.contains("sapphire")) {
+            return "saf";
+        } else if (catLower.contains("diamante") || catLower.contains("diamond")) {
+            return "dia";
+        } else if (catLower.contains("consignacion piedra")) {
+            return "esm"; // Asumiendo que consignaciones son esmeraldas por defecto
+        }
+
+        // Si no se reconoce la categoría específica, devolver vacío por defecto
+        return "";
+    }
 }
