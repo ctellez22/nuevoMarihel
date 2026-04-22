@@ -1,0 +1,116 @@
+═══════════════════════════════════════════════════════════════════════════════
+                    IMPRESORA ZEBRA ZD230 - QUICK START
+═══════════════════════════════════════════════════════════════════════════════
+
+⚡ SOLUCIÓN EN 3 PASOS (5 MINUTOS)
+
+PASO 1: DESCUBRIR IP DE IMPRESORA
+────────────────────────────────────────────────────────────────────────────────
+  a) En la impresora física:
+     Menu → Network → Anota: 192.168.X.X
+
+  b) O desde terminal:
+     ./scripts/find-printer-ip.sh
+
+PASO 2: VERIFICAR CONECTIVIDAD
+────────────────────────────────────────────────────────────────────────────────
+  nc -zv 192.168.X.X 9100
+
+  ✅ Si ves "Connection succeeded" → Continúa
+  ❌ Si falla → Verifica que impresora está encendida y en misma red
+
+PASO 3: EJECUTAR APLICACIÓN
+────────────────────────────────────────────────────────────────────────────────
+  java -Dprinter.ip=192.168.X.X -jar marihel.jar
+
+  ¡Listo! Ahora crea una joya y debería imprimirse automáticamente.
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                         OPCIONES ALTERNATIVAS
+═══════════════════════════════════════════════════════════════════════════════
+
+OPCIÓN A: VARIABLE DE ENTORNO (permanente en sesión)
+────────────────────────────────────────────────────────────────────────────────
+  export PRINTER_IP=192.168.X.X
+  export PRINTER_PORT=9100
+  java -jar marihel.jar
+
+OPCIÓN B: CONFIGURAR SCRIPT (permanente en archivo)
+────────────────────────────────────────────────────────────────────────────────
+  1. Edita: scripts/run-local-macos.sh
+  2. Descomenta estas líneas:
+     export PRINTER_IP=192.168.X.X
+     export PRINTER_PORT=9100
+  3. Ejecuta: ./scripts/run-local-macos.sh
+
+OPCIÓN C: INSTALAR CUPS (método tradicional)
+────────────────────────────────────────────────────────────────────────────────
+  chmod +x scripts/install-cups-macos.sh
+  ./scripts/install-cups-macos.sh
+  (Luego agrega impresora en Sistema > Impresoras y escáneres)
+
+═══════════════════════════════════════════════════════════════════════════════
+                              DIAGNÓSTICO
+═══════════════════════════════════════════════════════════════════════════════
+
+¿La impresora no funciona? Prueba esto:
+
+1️⃣  ¿Está la impresora encendida?
+    Verifica el indicador LED de la impresora
+
+2️⃣  ¿Está en la misma red?
+    ping 192.168.X.X
+    Deberías ver respuestas
+
+3️⃣  ¿Puerto 9100 accesible?
+    nc -zv 192.168.X.X 9100
+    Deberías ver: "Connection succeeded"
+
+4️⃣  ¿Archivo ZPL se crea?
+    ls -la ~/Desktop/bebeBoste.zpl
+    Debe existir
+
+5️⃣  ¿Logs de la app ayudan?
+    Busca en consola:
+    ✅ = Éxito
+    ❌ = Error
+    ℹ️  = Información
+
+═══════════════════════════════════════════════════════════════════════════════
+                         INFORMACIÓN ÚTIL
+═══════════════════════════════════════════════════════════════════════════════
+
+Puerto por defecto:     9100
+Charset:                ASCII/UTF-8
+Protocolo:              ZPL (Zebra Programming Language)
+Resolución:             203 DPI o 300 DPI
+
+Comandos macOS útiles:
+  lpstat -p -d              Listar impresoras
+  arp -a | grep zebra       Buscar en red
+  ping 192.168.1.X          Verificar conexión
+  nc -zv 192.168.1.X 9100   Verificar puerto
+
+═══════════════════════════════════════════════════════════════════════════════
+                         DOCUMENTACIÓN
+═══════════════════════════════════════════════════════════════════════════════
+
+Leer en este orden:
+  1. README_ZD230_SOLUCION.md          ← Guía general
+  2. SOLUCION_INMEDIATA_ZD230.md       ← Detallada
+  3. GUIA_CONFIG_ZD230.md              ← Referencia
+
+═══════════════════════════════════════════════════════════════════════════════
+                            SOPORTE
+═══════════════════════════════════════════════════════════════════════════════
+
+El código intenta 3 métodos de impresión en orden:
+  1. Socket TCP (RECOMENDADO - requiere IP)
+  2. Comando /usr/bin/lp (requiere CUPS)
+  3. Comando lp en PATH (requiere CUPS)
+
+Si todos fallan, muestra instrucciones claras.
+
+═══════════════════════════════════════════════════════════════════════════════
+
