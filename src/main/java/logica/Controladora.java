@@ -4,8 +4,12 @@ import org.example.SessionContext;
 import persistencia.ControladoraPersistencia;
 
 import java.math.BigDecimal;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
+import java.text.Normalizer;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
 
 public class Controladora {
 
@@ -340,89 +344,98 @@ public class Controladora {
 
     //GENERAR ZPL DE ETIQUETA
     public String generarZPLEtiqueta(String idDisplayOrId, String precio, double peso, boolean tienePiedra, String infoPiedra, String categoria) {
-         // Normalizo la categoría para evitar NPE en las comparaciones
-         String cat = (categoria == null) ? "" : categoria;
-
-         // Nueva lógica: manejar consignaciones que deben mostrar QH junto al peso
-         if (cat.equalsIgnoreCase("Consignacion Piedra")) {
-             // Imprimir igual que la rama con piedra, pero mostrando QH junto al peso
-             return "^XA\n" +
-                     "^PW984\n" +
-                     "^LL102\n" +
-                     "^FO30,28^A0N,17,17^FD  " + precio + "H ^FS\n" +
-                     "^FO30,60^A0N,17,17^FD " + peso + "/" + infoPiedra + " ^FS\n" +
-                     "^FO433,15^BY1,3,50^BCN,50,N,N^FD" + idDisplayOrId + "^FS\n" +
-                     "^FO444,70^A0N,24,24^FD" + idDisplayOrId + "^FS\n" +
-                     "^XZ";
-         }
-
-         if (cat.equalsIgnoreCase("Consignacion NO Piedra")) {
-             // Imprimir igual que la rama sin piedra, pero mostrando QH junto al peso
-             return "^XA\n" +
-                     "^PW984\n" +
-                     "^LL102\n" +
-                     "^FO30,28^A0N,24,24^FD  " + peso + "H ^FS\n" +
-                     "^FO30,58^A0N,19,19^FD" + precio + " ^FS\n" +
-                     "^FO428,15^BY1,3,50^BCN,50,N,N^FD" + idDisplayOrId + "^FS\n" +
-                     "^FO434,70^A0N,19,19^FD" + idDisplayOrId + "^FS\n" +
-                     "^XZ";
-         }
-
-        // Si es Topos Esmeralda con piedra: usar formato de "tienePiedra" (peso/infoPiedra en la misma línea)
-        // pero mantener las posiciones de código de barras/texto propias de Esmeralda.
-        if (cat.equalsIgnoreCase("topos Esmeralda") && tienePiedra) {
-            return "^XA\n" +
-                    "^PW984\n" +
-                    "^LL102\n" +
-                    "^FO30,28^A0N,24,24^FD  " + precio + "M ^FS\n" +
-                    "^FO30,60^A0N,17,17^FD " + peso + "/" + infoPiedra + " ^FS\n" +
-                    "^FO213,15^BY1,3,50^BCN,50,N,N^FD" + idDisplayOrId + "^FS\n" +
-                    "^FO219,70^A0N,24,24^FD" + idDisplayOrId + "^FS\n" +
-                    "^XZ";
+        String id = limpiarCampoZpl(idDisplayOrId);
+        String precioLimpio = limpiarCampoZpl(precio);
+        String pesoLimpio = formatearPesoEtiqueta(peso);
+        String piedraLimpia = compactarInfoPiedraEtiqueta(infoPiedra, categoria);
+        if (piedraLimpia.isBlank()) {
+            piedraLimpia = limpiarCampoZpl(categoria);
         }
 
-        if (tienePiedra && (cat.equalsIgnoreCase("topos") || cat.equalsIgnoreCase("topos Esmeralda") || cat.equalsIgnoreCase("Candongas Hoggies") || cat.equalsIgnoreCase("Cuellos"))) {
-            // Etiqueta especial para "topos" o "topos Esmeralda" con piedra (otros casos)
+        if (tienePiedra) {
             return "^XA\n" +
                     "^PW984\n" +
                     "^LL102\n" +
-                    "^FO30,28^A0N,24,24^FD  " + precio + "M ^FS\n" +
-                    "^FO30,60^A0N,20,20^FD " + infoPiedra + " ^FS\n" +
-                    "^FO213,15^BY1,3,50^BCN,50,N,N^FD" + idDisplayOrId + "^FS\n" +
-                    "^FO219,70^A0N,24,24^FD" + idDisplayOrId + "^FS\n" +
+                    "^FO180,28^A0N,20,20^FD  " + precioLimpio + " ^FS\n" +
+                    "^FO180,60^A0N,17,17^FD " + pesoLimpio + "/" + piedraLimpia + " ^FS\n" +
+                    "^FO350,15^BY1,3,50^BCN,50,N,N^FD" + id + "^FS\n" +
+                    "^FO365,70^A0N,19,19^FD" + id + "^FS\n" +
                     "^XZ";
-         } else if (cat.equalsIgnoreCase("topos") || cat.equalsIgnoreCase("topos Esmeralda") || cat.equalsIgnoreCase("Topos Doble Servicio") || cat.equalsIgnoreCase("Candongas Hoggies") || cat.equalsIgnoreCase("Cuellos")) {
-             // Etiqueta para "topos" o "topos Esmeralda" sin piedra
-             return "^XA\n" +
-                     "^PW984\n" +
-                     "^LL102\n" +
-                     "^FO30,28^A0N,24,24^FD  " + peso + "M ^FS\n" +
-                     "^FO30,58^A0N,19,19^FD" + precio + " ^FS\n" +
-                     "^FO173,15^BY1,3,50^BCN,50,N,N^FD" + idDisplayOrId + "^FS\n" +
-                     "^FO179,70^A0N,19,19^FD" + idDisplayOrId + "^FS\n" +
-                     "^XZ";
-         } else if (tienePiedra) {
-             // Etiqueta estándar para joyas con piedra (nuevos tamaños)
-             return "^XA\n" +
-                     "^PW984\n" +
-                     "^LL102\n" +
-                     "^FO180,28^A0N,20,20^FD  " + precio + " ^FS\n" +
-                     "^FO180,60^A0N,17,17^FD " + peso + "/" + infoPiedra + " ^FS\n" +
-                     "^FO350,15^BY1,3,50^BCN,50,N,N^FD" + idDisplayOrId + "^FS\n" +
-                     "^FO365,70^A0N,19,19^FD" + idDisplayOrId + "^FS\n" +
-                     "^XZ";
-         } else {
-             // Etiqueta estándar (nuevos tamaños)
-             return "^XA\n" +
-                     "^PW984\n" +
-                     "^LL102\n" +
-                     "^FO180,28^A0N,24,24^FD  " + peso + " ^FS\n" +
-                     "^FO180,58^A0N,19,19^FD" + precio + " ^FS\n" +
-                     "^FO350,15^BY1,3,50^BCN,50,N,N^FD" + idDisplayOrId + "^FS\n" +
-                     "^FO365,70^A0N,19,19^FD" + idDisplayOrId + "^FS\n" +
-                     "^XZ";
-         }
-     }
+        } else {
+            return "^XA\n" +
+                    "^PW984\n" +
+                    "^LL102\n" +
+                    "^FO180,28^A0N,24,24^FD  " + pesoLimpio + " ^FS\n" +
+                    "^FO180,58^A0N,19,19^FD" + precioLimpio + " ^FS\n" +
+                    "^FO350,15^BY1,3,50^BCN,50,N,N^FD" + id + "^FS\n" +
+                    "^FO365,70^A0N,19,19^FD" + id + "^FS\n" +
+                    "^XZ";
+        }
+    }
+
+    private String compactarInfoPiedraEtiqueta(String infoPiedra, String categoria) {
+        String fuente = limpiarCampoZpl(infoPiedra);
+        if (!fuente.isBlank()) {
+            return fuente;
+        }
+        return limpiarCampoZpl(categoria);
+    }
+
+    private String abreviarTipoPiedra(String valor) {
+        String base = valor == null ? "" : valor.trim();
+        if (base.isBlank()) {
+            return "pie";
+        }
+
+        String normalizado = Normalizer.normalize(base, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .toLowerCase(Locale.ROOT);
+
+        if (normalizado.contains("esmer")) {
+            return "esm";
+        }
+        if (normalizado.contains("diam")) {
+            return "dia";
+        }
+        if (normalizado.contains("rubi")) {
+            return "rub";
+        }
+        if (normalizado.contains("zafir")) {
+            return "zaf";
+        }
+        if (normalizado.contains("topa")) {
+            return "top";
+        }
+        if (normalizado.contains("amat")) {
+            return "ama";
+        }
+
+        String soloLetras = normalizado.replaceAll("[^a-z0-9]", "");
+        if (soloLetras.isBlank()) {
+            return "pie";
+        }
+        return soloLetras.length() <= 3 ? soloLetras : soloLetras.substring(0, 3);
+    }
+
+    private String limpiarCampoZpl(String valor) {
+        if (valor == null) {
+            return "";
+        }
+        // Evita que datos del usuario rompan comandos ZPL.
+        return valor
+                .replace("^", " ")
+                .replace("~", " ")
+                .replace("\n", " ")
+                .replace("\r", " ")
+                .trim();
+    }
+
+    private String formatearPesoEtiqueta(double peso) {
+        DecimalFormatSymbols symbols = new DecimalFormatSymbols(Locale.US);
+        symbols.setDecimalSeparator('.');
+        DecimalFormat formatter = new DecimalFormat("0.##", symbols);
+        return formatter.format(peso);
+    }
 
     // Método auxiliar para determinar el tipo de piedra basado en la categoría
     private String determinarTipoPiedra(String categoria) {
