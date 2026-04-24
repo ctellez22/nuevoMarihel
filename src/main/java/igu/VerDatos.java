@@ -135,7 +135,7 @@ public class VerDatos {
         lstResultados.setBackground(UITheme.BG);
         lstResultados.setSelectionBackground(UITheme.ACCENT);
         lstResultados.setSelectionForeground(Color.WHITE);
-        lstResultados.setFixedCellHeight(32);
+        lstResultados.setFixedCellHeight(100);
 
         JSplitPane splitPane = new JSplitPane(
                 JSplitPane.HORIZONTAL_SPLIT,
