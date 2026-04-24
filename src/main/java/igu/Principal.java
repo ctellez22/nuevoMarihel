@@ -4,6 +4,7 @@ import org.example.SessionContext;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.geom.RoundRectangle2D;
 
 public class Principal {
     private JButton cargarDatosButton;
@@ -201,6 +202,10 @@ public class Principal {
     }
 
     private void cargarImagenEnPanelFoto() {
+        if (session != null && session.tienda() == SessionContext.Tienda.QUEENS) {
+            panelFoto.add(crearTituloQueens(), BorderLayout.CENTER);
+            return;
+        }
         try {
             ImageIcon icon = new ImageIcon(getClass().getResource("/aca.png"));
             Image scaled = icon.getImage().getScaledInstance(260, 260, Image.SCALE_SMOOTH);
@@ -212,6 +217,89 @@ public class Principal {
             lbl.setForeground(UITheme.TEXT_MUTED);
             panelFoto.add(lbl, BorderLayout.CENTER);
         }
+    }
+
+    private JPanel crearTituloQueens() {
+        return new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2 = (Graphics2D) g;
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,       RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,  RenderingHints.VALUE_TEXT_ANTIALIAS_LCD_HRGB);
+                g2.setRenderingHint(RenderingHints.KEY_RENDERING,          RenderingHints.VALUE_RENDER_QUALITY);
+
+                int w = getWidth();
+                int h = getHeight();
+
+                // fondo con gradiente suave marfil → blanco
+                GradientPaint bgGrad = new GradientPaint(0, 0, new Color(255, 252, 240), 0, h, Color.WHITE);
+                g2.setPaint(bgGrad);
+                g2.fill(new RoundRectangle2D.Float(w * .06f, h * .05f, w * .88f, h * .90f, 28, 28));
+
+                // borde dorado sutil
+                g2.setColor(new Color(200, 160, 60, 80));
+                g2.setStroke(new BasicStroke(1.4f));
+                g2.draw(new RoundRectangle2D.Float(w * .06f, h * .05f, w * .88f - 1, h * .90f - 1, 28, 28));
+
+                // corona unicode centrada arriba
+                Font coronaFont = new Font("Serif", Font.PLAIN, 38);
+                g2.setFont(coronaFont);
+                FontMetrics fmC = g2.getFontMetrics();
+                String corona = "\u2655";
+                int cx = (w - fmC.stringWidth(corona)) / 2;
+                int cy = (int)(h * 0.35f);
+                GradientPaint crownGrad = new GradientPaint(cx, cy - fmC.getAscent(), new Color(218, 165, 32), cx, cy, new Color(255, 200, 50));
+                g2.setPaint(crownGrad);
+                g2.drawString(corona, cx, cy);
+
+                // línea decorativa izquierda y derecha de la corona
+                int lineY  = (int)(h * 0.38f);
+                int lineX1 = (int)(w * 0.12f);
+                int lineX2 = (int)(w * 0.88f);
+                int textCenterX = w / 2;
+                int gapHalf = fmC.stringWidth(corona) / 2 + 14;
+                g2.setStroke(new BasicStroke(1f));
+                GradientPaint lineGrad1 = new GradientPaint(lineX1, lineY, new Color(200,160,60,0), textCenterX - gapHalf, lineY, new Color(200,160,60,180));
+                g2.setPaint(lineGrad1);
+                g2.drawLine(lineX1, lineY, textCenterX - gapHalf, lineY);
+                GradientPaint lineGrad2 = new GradientPaint(textCenterX + gapHalf, lineY, new Color(200,160,60,180), lineX2, lineY, new Color(200,160,60,0));
+                g2.setPaint(lineGrad2);
+                g2.drawLine(textCenterX + gapHalf, lineY, lineX2, lineY);
+
+                // texto "Queens" con gradiente dorado
+                Font queenFont = new Font("Times New Roman", Font.BOLD | Font.ITALIC, 58);
+                g2.setFont(queenFont);
+                FontMetrics fmQ = g2.getFontMetrics();
+                String texto = "Queens";
+                int tx = (w - fmQ.stringWidth(texto)) / 2;
+                int ty = (int)(h * 0.62f);
+                GradientPaint textGrad = new GradientPaint(tx, ty - fmQ.getAscent(), new Color(180, 130, 20), tx, ty, new Color(240, 190, 60));
+                g2.setPaint(textGrad);
+                g2.drawString(texto, tx, ty);
+
+                // subtítulo "Joyería"
+                Font subFont = new Font("Serif", Font.ITALIC, 16);
+                g2.setFont(subFont);
+                FontMetrics fmS = g2.getFontMetrics();
+                String sub = "Joyería";
+                int sx = (w - fmS.stringWidth(sub)) / 2;
+                int sy = (int)(h * 0.75f);
+                g2.setColor(new Color(160, 120, 20, 200));
+                g2.drawString(sub, sx, sy);
+
+                // línea separadora inferior dorada (dos mitades: fade-in y fade-out)
+                int sepY  = (int)(h * 0.80f);
+                int sepX1 = (int)(w * 0.25f);
+                int sepMid = w / 2;
+                int sepX2 = (int)(w * 0.75f);
+                g2.setStroke(new BasicStroke(1f));
+                g2.setPaint(new GradientPaint(sepX1, sepY, new Color(200,160,60,0), sepMid, sepY, new Color(200,160,60,200)));
+                g2.drawLine(sepX1, sepY, sepMid, sepY);
+                g2.setPaint(new GradientPaint(sepMid, sepY, new Color(200,160,60,200), sepX2, sepY, new Color(200,160,60,0)));
+                g2.drawLine(sepMid, sepY, sepX2, sepY);
+            }
+        };
     }
 
     public JPanel getMainPanel() {

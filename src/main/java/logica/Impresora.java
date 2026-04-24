@@ -55,47 +55,16 @@ public class Impresora {
 
 
     private void imprimirEnMac(String zplData) {
-        // Detectar automáticamente impresora Zebra disponible (ZD230, ZD421, etc.)
-        String printerName = System.getProperty("printer.name", detectarImpresoraMac());
+        String printerName = System.getProperty("printer.name", "Zebra_Technologies_ZTC_ZD230_203dpi_ZPL");
 
-        // Ruta del archivo en el escritorio
         File zplFile = new File(System.getProperty("user.home") + "/Desktop/bebeBoste.zpl");
         try {
-            try (BufferedWriter writer = new BufferedWriter(new FileWriter(zplFile, StandardCharsets.US_ASCII))) { // ZPL = ASCII
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(zplFile, StandardCharsets.US_ASCII))) {
                 writer.write(zplData);
             }
             System.out.println("Archivo ZPL creado en: " + zplFile.getAbsolutePath());
 
-            // Primero, intentar por socket TCP (más confiable en redes modernas)
-            String printerIp = System.getProperty("printer.ip");
-            if (printerIp == null || printerIp.isBlank()) {
-                printerIp = System.getenv("PRINTER_IP");
-            }
-            String portProp = System.getProperty("printer.port");
-            if (portProp == null || portProp.isBlank()) {
-                portProp = System.getenv("PRINTER_PORT");
-            }
-            int port = 9100; // puerto por defecto
-            if (portProp != null && !portProp.isBlank()) {
-                try {
-                    port = Integer.parseInt(portProp);
-                } catch (NumberFormatException ignored) {}
-            }
-
-            // Intento 1: Socket TCP si está configurado (RECOMENDADO)
-            if (printerIp != null && !printerIp.isBlank()) {
-                try {
-                    PrinterUtils.sendZplOverSocket(printerIp, port, zplData);
-                    System.out.println("✅ Etiqueta enviada por socket TCP a " + printerIp + ":" + port);
-                    return;
-                } catch (IOException e) {
-                    System.err.println("⚠️  Intento por socket falló: " + e.getMessage() + " — intentando 'lp' command...");
-                }
-            } else {
-                System.out.println("ℹ️  Sin configuración de IP. Intentando comando 'lp' del sistema...");
-            }
-
-            // Intento 2: /usr/bin/lp (requiere CUPS instalado)
+            // Intento 1: /usr/bin/lp (ruta absoluta)
             ProcessBuilder pb1 = new ProcessBuilder(
                     "/usr/bin/lp",
                     "-d", printerName,
@@ -108,16 +77,16 @@ public class Impresora {
                 String out1 = readProcessOutput(p1.getInputStream());
                 int exit1 = p1.waitFor();
                 if (exit1 == 0) {
-                    System.out.println("✅ Etiqueta enviada con /usr/bin/lp a " + printerName + " correctamente.");
+                    System.out.println("Etiqueta enviada con /usr/bin/lp correctamente.");
                     return;
                 } else {
-                    System.err.println("⚠️  /usr/bin/lp falló con código: " + exit1);
+                    System.err.println("/usr/bin/lp falló con código: " + exit1 + ". Salida:\n" + out1 + "\nIntentando 'lp' en PATH...");
                 }
             } catch (IOException | InterruptedException e) {
-                System.err.println("⚠️  /usr/bin/lp no está disponible: " + e.getMessage());
+                System.err.println("Fallo al ejecutar /usr/bin/lp: " + e.getMessage() + ". Intentando 'lp' en PATH...");
             }
 
-            // Intento 3: 'lp' (sin ruta)
+            // Intento 2: 'lp' sin ruta
             ProcessBuilder pb2 = new ProcessBuilder(
                     "lp",
                     "-d", printerName,
@@ -130,62 +99,41 @@ public class Impresora {
                 String out2 = readProcessOutput(p2.getInputStream());
                 int exit2 = p2.waitFor();
                 if (exit2 == 0) {
-                    System.out.println("✅ Etiqueta enviada con 'lp' a " + printerName + " correctamente.");
+                    System.out.println("Etiqueta enviada con 'lp' en PATH correctamente.");
                     return;
+                } else {
+                    System.err.println("'lp' en PATH falló con código: " + exit2 + ". Salida:\n" + out2);
                 }
-            } catch (IOException | InterruptedException ignored) {}
+            } catch (IOException | InterruptedException e) {
+                System.err.println("Fallo al ejecutar 'lp' en PATH: " + e.getMessage());
+            }
 
-            // Si llegamos aquí, todos los intentos fallaron
-            mostrarInstruccionesAyuda(printerIp, port);
+            // Intento 3: socket TCP (fallback — solo si IP configurada)
+            String printerIp = System.getProperty("printer.ip");
+            if (printerIp == null || printerIp.isBlank()) printerIp = System.getenv("PRINTER_IP");
+            String portProp = System.getProperty("printer.port");
+            if (portProp == null || portProp.isBlank()) portProp = System.getenv("PRINTER_PORT");
+            int port = 9100;
+            if (portProp != null && !portProp.isBlank()) {
+                try { port = Integer.parseInt(portProp); } catch (NumberFormatException ignored) {}
+            }
+            if (printerIp != null && !printerIp.isBlank()) {
+                try {
+                    PrinterUtils.sendZplOverSocket(printerIp, port, zplData);
+                    System.out.println("Etiqueta enviada por socket a " + printerIp + ":" + port);
+                    return;
+                } catch (IOException e) {
+                    System.err.println("Falló el envío por socket a " + printerIp + ":" + port + " — " + e.getMessage());
+                }
+            }
+
+            System.err.println("No se pudo enviar la etiqueta: ningún método funcionó.");
 
         } catch (IOException e) {
-            System.err.println("❌ Error al crear el archivo ZPL en macOS: " + e.getMessage());
+            System.err.println("Error al crear el archivo ZPL en macOS: " + e.getMessage());
         }
     }
 
-    // Nuevo helper para mostrar instrucciones útiles cuando falla la impresión
-    private void mostrarInstruccionesAyuda(String printerIp, int port) {
-        System.err.println("\n" + "=".repeat(70));
-        System.err.println("❌ NO SE PUDO IMPRIMIR LA ETIQUETA");
-        System.err.println("=".repeat(70));
-        System.err.println("\n📌 SOLUCIONES RECOMENDADAS:\n");
-        
-        System.err.println("OPCIÓN 1: Usar Impresión por Socket TCP (RECOMENDADA)");
-        System.err.println("  Obtén la IP de tu impresora ZD230:");
-        System.err.println("    1. Panel de control de la impresora (botón en la ZD230)");
-        System.err.println("    2. O busca: arp -a | grep -i zebra");
-        System.err.println("");
-        System.err.println("  Luego ejecuta con:");
-        System.err.println("    java -Dprinter.ip=192.168.X.X -jar marihel.jar");
-        System.err.println("    O con variables de entorno:");
-        System.err.println("    export PRINTER_IP=192.168.X.X && java -jar marihel.jar");
-        System.err.println("");
-        
-        System.err.println("OPCIÓN 2: Instalar CUPS (para usar comando 'lp')");
-        System.err.println("  En terminal:");
-        System.err.println("    chmod +x scripts/install-cups-macos.sh");
-        System.err.println("    ./scripts/install-cups-macos.sh");
-        System.err.println("");
-        System.err.println("  O manualmente:");
-        System.err.println("    brew install cups");
-        System.err.println("");
-        
-        System.err.println("OPCIÓN 3: Agregar impresora a macOS");
-        System.err.println("  1. Sistema > Impresoras y escáneres");
-        System.err.println("  2. Haz clic en '+' para agregar");
-        System.err.println("  3. Selecciona tu Zebra ZD230");
-        System.err.println("  4. Confirma el nombre exacto con: lpstat -p -d");
-        System.err.println("  5. Usa ese nombre con: java -Dprinter.name=\"NombreExacto\" -jar marihel.jar");
-        System.err.println("");
-        
-        System.err.println("📋 VERIFICACIÓN RÁPIDA:");
-        System.err.println("  • Impresoras disponibles: lpstat -p -d");
-        System.err.println("  • Conectividad red: ping 192.168.X.X");
-        System.err.println("  • Puerto 9100: nc -zv 192.168.X.X 9100");
-        System.err.println("=".repeat(70) + "\n");
-    }
-
-    // Nuevo helper local para leer la salida del proceso (no bloqueante cuando proceso ya terminó)
     private static String readProcessOutput(InputStream is) {
         try (BufferedReader r = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
             StringBuilder sb = new StringBuilder();
@@ -199,33 +147,4 @@ public class Impresora {
         }
     }
 
-    // Nuevo helper: detecta impresoras Zebra disponibles en macOS (ZD230, ZD421, etc.)
-    private static String detectarImpresoraMac() {
-        String[] impresoras = {
-            "Zebra_Technologies_ZTC_ZD230_203dpi_ZPL",  // ZD230 203dpi - primaria
-            "Zebra_Technologies_ZTC_ZD230_ZPL",          // ZD230 alternativo
-            "ZD230",
-            "Zebra_Technologies_ZTC_ZD421_203dpi_ZPL",  // ZD421 203dpi
-            "ZD421",
-            "Zebra_ZD230",
-            "Zebra_ZD421"
-        };
-        
-        for (String impresora : impresoras) {
-            ProcessBuilder pb = new ProcessBuilder("/usr/bin/lpstat", "-p", "-d");
-            pb.redirectErrorStream(true);
-            try {
-                Process p = pb.start();
-                String output = readProcessOutput(p.getInputStream());
-                p.waitFor();
-                if (output.toLowerCase().contains(impresora.toLowerCase())) {
-                    System.out.println("Impresora detectada: " + impresora);
-                    return impresora;
-                }
-            } catch (Exception ignored) {}
-        }
-        
-        // Por defecto retorna ZD230
-        return "Zebra_Technologies_ZTC_ZD230_ZPL";
-    }
 }

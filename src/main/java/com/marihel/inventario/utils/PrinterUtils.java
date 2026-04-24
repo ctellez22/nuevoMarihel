@@ -31,7 +31,8 @@ public class PrinterUtils {
 
     // Enviar ZPL directamente al IP de impresora usando socket TCP (puerto 9100 por defecto)
     public static void sendZplOverSocket(String printerIp, int port, String zpl) throws IOException {
-        try (Socket socket = new Socket(printerIp, port)) {
+        try (Socket socket = new Socket()) {
+            socket.connect(new java.net.InetSocketAddress(printerIp, port), 5000); // 5s timeout de conexión
             socket.setSoTimeout(5000);
             OutputStream os = socket.getOutputStream();
             os.write(zpl.getBytes(StandardCharsets.UTF_8));

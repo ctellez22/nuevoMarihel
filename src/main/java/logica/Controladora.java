@@ -10,19 +10,24 @@ import java.text.Normalizer;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Controladora {
 
     private final ControladoraPersistencia persistencia;
+    private final SessionContext session;
 
     // Constructor sin sesión (Marihel por defecto)
     public Controladora() {
         this.persistencia = new ControladoraPersistencia();
+        this.session = null;
     }
 
     // Constructor con sesión: usa la tienda seleccionada
     public Controladora(SessionContext session) {
         this.persistencia = new ControladoraPersistencia(session != null ? session.tienda() : null);
+        this.session = session;
     }
 
     // Métodos de lógica que usan la persistencia
@@ -344,44 +349,100 @@ public class Controladora {
 
     //GENERAR ZPL DE ETIQUETA
     public String generarZPLEtiqueta(String idDisplayOrId, String precio, double peso, boolean tienePiedra, String infoPiedra, String categoria) {
-        String id = limpiarCampoZpl(idDisplayOrId);
-        String precioLimpio = limpiarCampoZpl(precio);
-        String pesoLimpio = formatearPesoEtiqueta(peso);
-        String piedraLimpia = compactarInfoPiedraEtiqueta(infoPiedra, categoria);
-        if (piedraLimpia.isBlank()) {
-            piedraLimpia = limpiarCampoZpl(categoria);
-        }
+        String id          = limpiarCampoZpl(idDisplayOrId);
+        String pesoLimpio  = formatearPesoEtiqueta(peso);
+        String letra       = resolverLetraTienda();       // "Q", "M" o ""
+        String precioConLetra = limpiarCampoZpl(precio) + (letra.isEmpty() ? "" : " " + letra);
 
         if (tienePiedra) {
+            String piedraTexto = resolverTextoPiedra(idDisplayOrId, infoPiedra, categoria);
             return "^XA\n" +
                     "^PW984\n" +
                     "^LL102\n" +
-                    "^FO180,28^A0N,20,20^FD  " + precioLimpio + " ^FS\n" +
-                    "^FO180,60^A0N,17,17^FD " + pesoLimpio + "/" + piedraLimpia + " ^FS\n" +
-                    "^FO350,15^BY1,3,50^BCN,50,N,N^FD" + id + "^FS\n" +
+                    "^FO165,28^A0N,20,20^FD  " + precioConLetra + " ^FS\n" +
+                    "^FO180,60^A0N,17,17^FD " + pesoLimpio + "/" + piedraTexto + " ^FS\n" +
+                    "^FO335,15^BY1,3,50^BCN,50,N,N^FD" + id + "^FS\n" +
                     "^FO365,70^A0N,19,19^FD" + id + "^FS\n" +
                     "^XZ";
         } else {
             return "^XA\n" +
                     "^PW984\n" +
                     "^LL102\n" +
-                    "^FO180,28^A0N,24,24^FD  " + pesoLimpio + " ^FS\n" +
-                    "^FO180,58^A0N,19,19^FD" + precioLimpio + " ^FS\n" +
-                    "^FO350,15^BY1,3,50^BCN,50,N,N^FD" + id + "^FS\n" +
+                    "^FO165,28^A0N,24,24^FD  " + pesoLimpio + " ^FS\n" +
+                    "^FO180,58^A0N,19,19^FD" + precioConLetra + " ^FS\n" +
+                    "^FO335,15^BY1,3,50^BCN,50,N,N^FD" + id + "^FS\n" +
                     "^FO365,70^A0N,19,19^FD" + id + "^FS\n" +
                     "^XZ";
         }
     }
 
-    private String compactarInfoPiedraEtiqueta(String infoPiedra, String categoria) {
-        String fuente = limpiarCampoZpl(infoPiedra);
-        if (!fuente.isBlank()) {
-            return fuente;
+    /** Devuelve "Q" para Queens, "M" para Marihel, "" si no hay sesión. */
+    private String resolverLetraTienda() {
+        if (session == null) return "";
+        return session.isQueens() ? "Q" : "M";
+    }
+
+    /**
+     * Decide qué texto de piedra imprimir:
+     * - Queens viejas (displayId empieza con "2" y tiene 5 dígitos): infoPiedra tal cual.
+     * - infoPiedra en formato nuevo P1(origen=...): parsear a compacto (ej. "dia 1.2kl, esm 0.8kl").
+     * - Cualquier otro caso (viejitas Marihel u otros): infoPiedra tal cual.
+     */
+    private String resolverTextoPiedra(String displayId, String infoPiedra, String categoria) {
+        String info = infoPiedra == null ? "" : infoPiedra.trim();
+
+        // Viejitas Queens: ID empieza con "2" y tiene exactamente 5 dígitos
+        boolean esViejitaQueens = session != null && session.isQueens()
+                && displayId != null && displayId.matches("2\\d{4}");
+
+        if (esViejitaQueens) {
+            return limpiarCampoZpl(info.isBlank() ? categoria : info);
         }
-        return limpiarCampoZpl(categoria);
+
+        // Formato nuevo: P1(origen=independiente,tipo=...,peso=...,...) | P2(...)
+        if (info.matches("(?i)P\\d+\\(origen=.*")) {
+            String compacto = parsearInfoPiedraCompacto(info);
+            if (!compacto.isBlank()) return compacto;
+        }
+
+        // Viejitas Marihel u otro formato desconocido: imprimir tal cual
+        String fallback = limpiarCampoZpl(info);
+        return fallback.isBlank() ? limpiarCampoZpl(categoria) : fallback;
+    }
+
+    /**
+     * Parsea "P1(origen=independiente,tipo=Diamante,peso=1.2,...) | P2(tipo=Esmeralda,peso=0.8,...)"
+     * y devuelve "dia 1.2kl, esm 0.8kl".
+     */
+    private String parsearInfoPiedraCompacto(String info) {
+        Pattern p = Pattern.compile("P\\d+\\(([^)]+)\\)", Pattern.CASE_INSENSITIVE);
+        Matcher m = p.matcher(info);
+        StringBuilder sb = new StringBuilder();
+        while (m.find()) {
+            String grupo = m.group(1); // "origen=independiente,tipo=Diamante,peso=1.2,precioQ=..."
+            String tipo  = extraerValorCampo(grupo, "tipo");
+            String peso  = extraerValorCampo(grupo, "peso");
+            if (!tipo.isBlank() || !peso.isBlank()) {
+                if (sb.length() > 0) sb.append(", ");
+                sb.append(abreviarTipoPiedra(tipo));
+                if (!peso.isBlank()) {
+                    // quitar separadores de miles (apostrofes) antes de mostrar
+                    sb.append(" ").append(peso.replace("'", "")).append("kl");
+                }
+            }
+        }
+        return sb.toString();
+    }
+
+    /** Extrae el valor de un campo "clave=valor" dentro de un string de campos separados por coma. */
+    private String extraerValorCampo(String grupo, String clave) {
+        Pattern p = Pattern.compile(Pattern.quote(clave) + "=([^,)]+)", Pattern.CASE_INSENSITIVE);
+        Matcher m = p.matcher(grupo);
+        return m.find() ? m.group(1).trim() : "";
     }
 
     private String abreviarTipoPiedra(String valor) {
+        // (también usado por parsearInfoPiedraCompacto)
         String base = valor == null ? "" : valor.trim();
         if (base.isBlank()) {
             return "pie";

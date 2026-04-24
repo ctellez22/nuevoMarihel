@@ -56,7 +56,7 @@ public class CargarDatos {
 
     private void inicializarTodo() {
         // Instanciar la controladora de lógica
-        logicaController = new Controladora();
+        logicaController = new Controladora(session);
         ImageIcon Icon = new ImageIcon(getClass().getResource("/imprimir.png"));
         ImageIcon customIcon = new ImageIcon(Icon.getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH));
         //
