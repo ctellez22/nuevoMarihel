@@ -1,0 +1,20 @@
+# Maven
+/target/
+/dependency-reduced-pom.xml
+/tools/legacy/
+
+# IntelliJ IDEA
+/.idea/**/workspace.xml
+/.idea/**/dataSources/
+/.idea/**/dataSources.local.xml
+/.idea/**/shelf/
+/.idea/**/httpRequests/
+*.iml
+
+# macOS
+.DS_Store
+
+# Archivos temporales de impresión
+*.zpl
+*.epl
+
