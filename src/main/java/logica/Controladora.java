@@ -357,6 +357,7 @@ public class Controladora {
         if (tienePiedra) {
             String piedraTexto = resolverTextoPiedra(idDisplayOrId, infoPiedra, categoria);
             return "^XA\n" +
+                    "^POI\n" +
                     "^PW984\n" +
                     "^LL102\n" +
                     "^FO165,28^A0N,20,20^FD  " + precioConLetra + " ^FS\n" +
@@ -366,6 +367,7 @@ public class Controladora {
                     "^XZ";
         } else {
             return "^XA\n" +
+                    "^POI\n" +
                     "^PW984\n" +
                     "^LL102\n" +
                     "^FO165,28^A0N,24,24^FD  " + pesoLimpio + " ^FS\n" +
