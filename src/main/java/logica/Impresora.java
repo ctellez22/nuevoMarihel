@@ -55,7 +55,7 @@ public class Impresora {
 
 
     private void imprimirEnMac(String zplData) {
-        String printerName = System.getProperty("printer.name", "Zebra_Technologies_ZTC_ZD230_203dpi_ZPL");
+        String printerName = System.getProperty("printer.name", "Zebra_Technologies_ZTC_ZD421_203dpi_ZPL");
 
         File zplFile = new File(System.getProperty("user.home") + "/Desktop/bebeBoste.zpl");
         try {
