@@ -358,21 +358,35 @@ public class Controladora {
             String piedraTexto = resolverTextoPiedra(idDisplayOrId, infoPiedra, categoria);
             return "^XA\n" +
                     "^PON\n" +
+                    "^PMN\n" +
+                    "^LRN\n" +
+                    "^FWN\n" +
+                    "^MTT\n" +
+                    "~SD25\n" +
+                    "^MD25\n" +
+                    "^PR1\n" +
                     "^PW984\n" +
                     "^LL102\n" +
                     "^FO165,28^A0N,20,20^FD  " + precioConLetra + " ^FS\n" +
                     "^FO180,60^A0N,17,17^FD " + pesoLimpio + "/" + piedraTexto + " ^FS\n" +
-                    "^FO335,10^BY1,3,50^BCN,50,N,N^FD" + id + "^FS\n" +
+                    "^FO335,10^BY1,2,45^BCN,45,N,N^FD" + id + "^FS\n" +
                     "^FO365,65^A0N,19,19^FD" + id + "^FS\n" +
                     "^XZ";
         } else {
             return "^XA\n" +
                     "^PON\n" +
+                    "^PMN\n" +
+                    "^LRN\n" +
+                    "^FWN\n" +
+                    "^MTT\n" +
+                    "~SD25\n" +
+                    "^MD25\n" +
+                    "^PR1\n" +
                     "^PW984\n" +
                     "^LL102\n" +
                     "^FO165,28^A0N,24,24^FD  " + pesoLimpio + " ^FS\n" +
                     "^FO180,58^A0N,19,19^FD" + precioConLetra + " ^FS\n" +
-                    "^FO335,10^BY1,3,50^BCN,50,N,N^FD" + id + "^FS\n" +
+                    "^FO335,10^BY1,2,45^BCN,45,N,N^FD" + id + "^FS\n" +
                     "^FO365,65^A0N,19,19^FD" + id + "^FS\n" +
                     "^XZ";
         }
